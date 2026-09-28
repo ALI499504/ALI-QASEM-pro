@@ -10,7 +10,7 @@ This document lists every file created or modified during the user-facing produc
 | `backend/data/walk_forward_results.json` | **Created** | Pre-computed 36-ticker walk-forward validation benchmark database containing model MAPEs, naive MAPEs, Skill Scores, and Diebold-Mariano statistics. |
 | `backend/main.py` | **Modified** | Mounted `auth` and `saved_backtests` routers and upgraded background alert scheduler to evaluate all 5 condition types. |
 | `backend/models/database.py` | **Modified** | Added `User`, `RefreshToken`, `Watchlist`, `SavedBacktest` models, and updated `Alert` model with dual modern/legacy column synchronization. |
-| `backend/models/schemas.py` | **Modified** | Added Pydantic schemas for Auth, Watchlists, Saved Backtests, Alerts, Model Confidence, and strong password validation with common-passwords blocklist. |
+| `backend/models/schemas.py` | **Modified** | Added Pydantic schemas for Auth, Watchlists, Saved Backtests, Alerts, Model Confidence, Market Status, and strong password validation. |
 | `backend/requirements.txt` | **Modified** | Pinned `passlib==1.7.4`, `bcrypt==4.0.1`, and added `pyjwt==2.10.1`, `slowapi==0.1.10`, and `pytest`. |
 | `backend/routers/alerts.py` | **Modified** | Implemented user-scoped alert CRUD endpoints and `GET /api/alerts/triggered` for in-app client notification polling. |
 | `backend/routers/auth.py` | **Created** | Added `/register`, `/login`, `/refresh`, `/logout`, `/me`, rate limiting (5 req/min), in-memory access token issuance, and `httpOnly` refresh cookies. |
@@ -18,6 +18,7 @@ This document lists every file created or modified during the user-facing produc
 | `backend/routers/saved_backtests.py` | **Created** | Added user-scoped backtest CRUD endpoints and `POST /api/saved-backtests/{id}/rerun` for live re-execution against fresh market data. |
 | `backend/routers/watchlist.py` | **Modified** | Upgraded watchlist endpoints to be user-scoped with live market quotes and backward compatibility. |
 | `backend/tests/test_extended_features.py` | **Created** | Automated test suite verifying password validation, auth flows, refresh revocation, watchlists, saved backtests, alerts, and model confidence. |
+| `backend/tests/test_market_status.py` | **Created** | Automated test suite verifying 4-state market sessions, holiday closures, 10:09 PM night hours, and API response schema. |
 | `frontend/src/api/client.ts` | **Modified** | Rewritten API layer with in-memory token state, Axios 401 automatic silent refresh interceptor, and typed endpoints. |
 | `frontend/src/components/AuthModal.tsx` | **Created** | Interactive modal component for user login and registration with real-time password requirements verification. |
 | `frontend/src/components/BacktestingStudio.tsx` | **Created** | Full-featured quantitative backtesting laboratory supporting SMA/RSI algorithms, KPI performance cards, trade history logs, and "My Strategies" manager. |
