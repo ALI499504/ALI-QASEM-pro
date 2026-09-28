@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from models.database import Alert, User, get_db
 from models.schemas import AlertCreate, AlertCreateScoped, AlertResponse, AlertScopedResponse
-from routers.auth import get_current_user
+from routers.auth import get_current_user, get_current_user_optional
 from services.data_service import normalize_symbol
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
@@ -127,16 +127,20 @@ def list_triggered_alerts(
 @router.delete("/{alert_id}")
 def delete_user_alert(
     alert_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db),
 ) -> dict[str, str]:
-    """Deletes an alert belonging to the logged-in user."""
-    alert = db.scalar(
-        select(Alert).where(
-            Alert.id == alert_id,
-            Alert.user_id == current_user.id,
+    """Deletes an alert belonging to the logged-in user or unauthenticated alert."""
+    if current_user:
+        alert = db.scalar(
+            select(Alert).where(
+                Alert.id == alert_id,
+                Alert.user_id == current_user.id,
+            )
         )
-    )
+    else:
+        alert = db.get(Alert, alert_id)
+
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found.")
 

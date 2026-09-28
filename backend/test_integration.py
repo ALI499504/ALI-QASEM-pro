@@ -24,12 +24,10 @@ def override_get_db():
     finally:
         db.close()
 
-# Override app dependency
-app.dependency_overrides[get_db] = override_get_db
-
 class TestStockVisionAnalytics(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        app.dependency_overrides[get_db] = override_get_db
         # Create tables
         Base.metadata.create_all(bind=engine)
         cls.client = TestClient(app)
@@ -101,6 +99,7 @@ class TestStockVisionAnalytics(unittest.TestCase):
 
         # Drop tables and remove temp file
         Base.metadata.drop_all(bind=engine)
+        app.dependency_overrides.clear()
         if os.path.exists("./test_stockvision.db"):
             try:
                 os.remove("./test_stockvision.db")

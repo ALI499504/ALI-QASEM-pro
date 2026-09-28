@@ -136,6 +136,18 @@ def get_current_user(
     return user
 
 
+def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    if not credentials or not credentials.credentials:
+        return None
+    try:
+        return get_current_user(credentials, db)
+    except HTTPException:
+        return None
+
+
 @router.post("/register", response_model=TokenResponse)
 @limiter.limit("5/minute")
 def register(request: Request, response: Response, payload: UserRegister = Body(...), db: Session = Depends(get_db)):

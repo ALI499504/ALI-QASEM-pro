@@ -56,6 +56,7 @@ import {
   getTriggeredAlerts,
   type ThresholdAlert,
 } from "./api/client";
+import { FALLBACK_MARKET_NEWS_SENTIMENT } from "./data/newsSentimentFallback";
 import { createChart, ColorType } from "lightweight-charts";
 import ForecastStudio from "./components/ForecastStudio";
 import ForecastOpportunities from "./components/ForecastOpportunities";
@@ -307,7 +308,7 @@ function useWindowWidth() {
 
 function AppShell() {
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
-  
+
   const navigate = (path: string) => {
     window.history.pushState({}, "", path);
     setCurrentPath(path);
@@ -317,7 +318,7 @@ function AppShell() {
   const [symbol, setSymbol] = useState("AAPL");
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  
+
   const [isDark, setIsDark] = useState(() => localStorage.getItem("sv_theme") === "dark");
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -363,7 +364,7 @@ function AppShell() {
   const fallbackTicker = (overview.data?.indices || []) as Quote[];
   const live = useLiveQuotes(["^GSPC", "^IXIC", "^DJI", "^NSEI", "^BSESN", "GLD", "BTC-USD", symbol]);
   const ticker = live.quotes.length ? live.quotes : fallbackTicker;
-  
+
   const alertsQuery = useQuery({ queryKey: ["alerts"], queryFn: getAlerts, refetchInterval: 30000 });
   const activeAlertsCount = (alertsQuery.data || []).filter((a: any) => a.is_active || !a.is_triggered).length;
 
@@ -383,8 +384,8 @@ function AppShell() {
           onSearchClick={() => setSearchOpen(true)}
           isDark={isDark}
           onThemeToggle={toggleTheme}
-          userEmail={currentUser?.email || "Guest"}
-          userRole={currentUser?.role || "guest"}
+          userEmail={currentUser?.email || ""}
+          userRole={currentUser?.role || "user"}
           onLogout={handleLogout}
         />
       )}
@@ -414,12 +415,12 @@ function AppShell() {
           <span className="desk-version-pill">v2.4</span>
         </div>
 
-        <div className="desk-workspace-box">
+        <div className="desk-workspace-box" onClick={() => !currentUser && setAuthModalOpen(true)} style={{ cursor: currentUser ? "default" : "pointer" }}>
           <div className="desk-workspace-left">
             <LayoutGrid size={13} style={{ color: "var(--text-muted)" }} />
-            <span>{currentUser ? `${currentUser.email.split("@")[0]}'s Desk` : "Guest Session"}</span>
+            <span>{currentUser ? `${currentUser.email.split("@")[0]}'s Desk` : "Trading Desk"}</span>
           </div>
-          <span className="desk-prod-badge">{currentUser ? "PRO" : "DEMO"}</span>
+          <span className="desk-prod-badge">PRO</span>
         </div>
 
         <NavButton active={view === "dashboard"} onClick={() => setView("dashboard")} icon={<LayoutGrid />} label="Dashboard" />
@@ -438,7 +439,7 @@ function AppShell() {
           badge={triggeredCount > 0 ? `⚡ ${triggeredCount}` : activeAlertsCount > 0 ? String(activeAlertsCount) : undefined}
         />
         <NavButton active={view === "settings"} onClick={() => setView("settings")} icon={<SettingsIcon />} label="Settings" />
-        
+
         <div style={{ flexGrow: 1 }} />
         <DeskUserPill user={currentUser} onLogout={handleLogout} onOpenAuth={() => setAuthModalOpen(true)} setView={setView} />
       </aside>
@@ -799,9 +800,8 @@ function Topbar({
             type="button"
           >
             <span
-              className={`pulse-beacon-dot ${market.status} ${market.state} ${
-                market.isTransitioning ? "transitioning" : ""
-              }`}
+              className={`pulse-beacon-dot ${market.status} ${market.state} ${market.isTransitioning ? "transitioning" : ""
+                }`}
             ></span>
             {market.state === "PRE_MARKET" && (
               <Sunrise size={13} className="desk-session-icon" />
@@ -933,10 +933,12 @@ function Topbar({
       </div>
 
       <div className="desk-topbar-actions">
-        <div className="desk-ws-pill" onClick={() => (user ? setView("settings") : onOpenAuth?.())}>
-          <LayoutGrid size={13} style={{ color: "var(--primary-blue)" }} />
-          <span>{user ? `${user.email.split("@")[0]} • Pro Seat` : "Guest Session"}</span>
-        </div>
+        {user && (
+          <div className="desk-ws-pill" onClick={() => setView("settings")}>
+            <LayoutGrid size={13} style={{ color: "var(--primary-blue)" }} />
+            <span>{user.email.split("@")[0]} • Pro Seat</span>
+          </div>
+        )}
         <button className="desk-icon-btn" onClick={handleThemeToggle} title={activeIsDark ? "Switch to light mode" : "Switch to dark mode"}>
           {activeIsDark ? <Sun size={16} /> : <Moon size={16} />}
         </button>
@@ -1518,11 +1520,10 @@ function StockLab({
                   {money(quote.data?.price, currency)}
                 </span>
                 <span
-                  className={`px-2.5 py-1 rounded-full font-mono text-xs font-bold flex items-center gap-1 border ${
-                    isPos
+                  className={`px-2.5 py-1 rounded-full font-mono text-xs font-bold flex items-center gap-1 border ${isPos
                       ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60"
                       : "bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60"
-                  }`}
+                    }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${isPos ? "bg-emerald-500" : "bg-rose-500"} animate-pulse`} />
                   {quote.data?.change != null ? (isPos ? `+${quote.data.change.toFixed(2)}` : quote.data.change.toFixed(2)) : ""}
@@ -1534,11 +1535,10 @@ function StockLab({
 
           <div className="flex items-center gap-3 flex-wrap">
             <button
-              className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-sm ${
-                watch.isSuccess
+              className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-sm ${watch.isSuccess
                   ? "bg-emerald-600 text-white"
                   : "bg-blue-600 hover:bg-blue-700 text-white"
-              }`}
+                }`}
               disabled={watch.isPending}
               onClick={() => watch.mutate()}
             >
@@ -1640,11 +1640,10 @@ function StockLab({
                 ].map((item) => (
                   <button
                     key={item.value}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${
-                      chartPeriod === item.value
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${chartPeriod === item.value
                         ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                         : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                    }`}
+                      }`}
                     onClick={() => setChartPeriod(item.value)}
                   >
                     {item.label}
@@ -1742,13 +1741,12 @@ function StockLab({
                           {item.published_at ? " • " + new Date(item.published_at).toLocaleDateString() : ""}
                         </span>
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
-                            sent === "positive"
+                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${sent === "positive"
                               ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
                               : sent === "negative"
-                              ? "bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300"
-                              : "bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
-                          }`}
+                                ? "bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300"
+                                : "bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                            }`}
                         >
                           {sent}
                         </span>
@@ -1784,13 +1782,12 @@ function StockLab({
 
             <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-slate-50 dark:bg-[#1e293b]/40 border border-slate-100 dark:border-slate-800/80 text-center gap-2">
               <span
-                className={`text-2xl font-black font-mono tracking-wider uppercase px-4 py-1.5 rounded-xl border ${
-                  isBuy
+                className={`text-2xl font-black font-mono tracking-wider uppercase px-4 py-1.5 rounded-xl border ${isBuy
                     ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
                     : isSell
-                    ? "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
-                    : "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-                }`}
+                      ? "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+                      : "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                  }`}
               >
                 {rawSignal}
               </span>
@@ -1798,15 +1795,14 @@ function StockLab({
                 {[1, 2, 3, 4, 5].map((st) => (
                   <span
                     key={st}
-                    className={`w-5 h-1.5 rounded-full ${
-                      st <= (signal.data?.strength || 3)
+                    className={`w-5 h-1.5 rounded-full ${st <= (signal.data?.strength || 3)
                         ? isBuy
                           ? "bg-emerald-500"
                           : isSell
-                          ? "bg-rose-500"
-                          : "bg-amber-500"
+                            ? "bg-rose-500"
+                            : "bg-amber-500"
                         : "bg-slate-200 dark:bg-slate-700"
-                    }`}
+                      }`}
                   />
                 ))}
                 <span className="text-xs font-mono text-slate-500 dark:text-slate-400 ml-1">
@@ -1827,13 +1823,12 @@ function StockLab({
                 >
                   <span className="font-medium text-slate-700 dark:text-slate-300">{b.name}</span>
                   <span
-                    className={`font-mono font-bold uppercase text-[10px] px-2 py-0.5 rounded ${
-                      b.state?.toLowerCase().includes("bull") || b.state?.toLowerCase().includes("buy")
+                    className={`font-mono font-bold uppercase text-[10px] px-2 py-0.5 rounded ${b.state?.toLowerCase().includes("bull") || b.state?.toLowerCase().includes("buy")
                         ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
                         : b.state?.toLowerCase().includes("bear") || b.state?.toLowerCase().includes("sell")
-                        ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300"
-                        : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
-                    }`}
+                          ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300"
+                          : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                      }`}
                   >
                     {b.state}
                   </span>
@@ -2029,13 +2024,13 @@ function Compare() {
       {parsed.length < 2 ?
         <div className="empty-state"><div><div style={{ fontSize: 40 }}>📊</div><p>Add at least two symbols to generate a normalized comparison chart.</p></div></div>
         : compare.isFetching ? <p style={{ color: "var(--text-muted)", padding: 20 }}>Loading chart data...</p>
-        : <>
+          : <>
             {missingSeries.length > 0 && (
               <p style={{ color: "var(--text-muted)", margin: "0 0 10px" }}>
                 Limited chart data for: {missingSeries.join(", ")}. Latest quote data is still shown in metrics below.
               </p>
             )}
-            <ResponsiveContainer width="100%" height={360}><LineChart data={chartData} margin={{ right: 28, left: 6, bottom: 8 }}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="date" minTickGap={40} /><YAxis /><Tooltip /><Legend />{availableSeries.map((s, i) => <Line key={s} dataKey={s} connectNulls dot={false} activeDot={{ r: 5 }} stroke={["var(--primary)","var(--accent-teal)","var(--accent-rose)","var(--accent-violet)","var(--accent-amber)"][i]} strokeWidth={3} />)}</LineChart></ResponsiveContainer>
+            <ResponsiveContainer width="100%" height={360}><LineChart data={chartData} margin={{ right: 28, left: 6, bottom: 8 }}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="date" minTickGap={40} /><YAxis /><Tooltip /><Legend />{availableSeries.map((s, i) => <Line key={s} dataKey={s} connectNulls dot={false} activeDot={{ r: 5 }} stroke={["var(--primary)", "var(--accent-teal)", "var(--accent-rose)", "var(--accent-violet)", "var(--accent-amber)"][i]} strokeWidth={3} />)}</LineChart></ResponsiveContainer>
           </>
       }
     </GlassCard>
@@ -2290,7 +2285,7 @@ function EconomicCalendar() {
   const [limit, setLimit] = useState(10);
 
   const allEvents = useMemo(() => getDynamicEconEvents(today), []);
-  
+
   const todayIdx = useMemo(() => {
     const idx = allEvents.findIndex((e) => e.date >= todayStr);
     return idx === -1 ? allEvents.length - 1 : idx;
@@ -2381,13 +2376,13 @@ function EconomicCalendar() {
                     {!isCurrent && isUpcoming && <span style={{ marginLeft: 8, fontSize: 11, color: "var(--accent-amber)" }}>▶ Soon</span>}
                   </td>
                   <td>
-                    <a 
-                      href={ev.url || `https://www.google.com/search?q=${encodeURIComponent(ev.event + " economic event")}`} 
-                      target="_blank" 
+                    <a
+                      href={ev.url || `https://www.google.com/search?q=${encodeURIComponent(ev.event + " economic event")}`}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="event-link-anchor"
-                      style={{ 
-                        color: "var(--text-primary)", 
+                      style={{
+                        color: "var(--text-primary)",
                         textDecoration: "none",
                         display: "inline-flex",
                         alignItems: "center",
@@ -2419,13 +2414,13 @@ function Screener({ setSymbol, setView }: { setSymbol: (s: string) => void; setV
   const [q, setQ] = useState("");
   const [submitted, setSubmitted] = useState("");
   const [aiMode, setAiMode] = useState(false);
-  
+
   const screen = useQuery({
     queryKey: ["screener", submitted],
     queryFn: () => runScreener(submitted),
     enabled: submitted.length > 0 && !aiMode,
   });
-  
+
   const aiScreen = useQuery({
     queryKey: ["ai-screener", submitted],
     queryFn: () => runAiScreener(submitted),
@@ -2584,7 +2579,7 @@ function Watchlist({
             </div>
             <div>
               <strong className="text-xs text-slate-900 dark:text-white block">
-                Browsing with local guest session
+                Local Workspace Mode
               </strong>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
                 Sign in to back up your watchlist to your cloud profile and access it from any workstation.
@@ -2641,11 +2636,10 @@ function Watchlist({
                 type="button"
                 disabled={alreadyIn || add.isPending}
                 onClick={() => add.mutate(t)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
-                  alreadyIn
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${alreadyIn
                     ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
                     : "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-900/60 cursor-pointer"
-                }`}
+                  }`}
               >
                 {alreadyIn ? `✓ ${t}` : `+ ${t}`}
               </button>
@@ -2697,9 +2691,8 @@ function Watchlist({
                       ${money(row.price)}
                     </div>
                     <span
-                      className={`text-xs font-mono font-bold flex items-center justify-end gap-0.5 ${
-                        isPos ? "text-emerald-500" : "text-rose-500"
-                      }`}
+                      className={`text-xs font-mono font-bold flex items-center justify-end gap-0.5 ${isPos ? "text-emerald-500" : "text-rose-500"
+                        }`}
                     >
                       {isPos ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
                       {isPos ? "+" : ""}{(row.change_pct || 0).toFixed(2)}%
@@ -3059,11 +3052,10 @@ function Alerts({
             type="button"
             onClick={handleToggleSound}
             title={soundEnabled ? "Mute audio notifications" : "Enable audio notifications"}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
-              soundEnabled
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${soundEnabled
                 ? "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800"
                 : "bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700"
-            }`}
+              }`}
           >
             {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
             <span>{soundEnabled ? "Chime On" : "Chime Muted"}</span>
@@ -3178,11 +3170,10 @@ function Alerts({
                     key={t}
                     type="button"
                     onClick={() => setTargetSymbol(t)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
-                      targetSymbol === t
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${targetSymbol === t
                         ? "bg-blue-600 text-white shadow-sm scale-105"
                         : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                    }`}
+                      }`}
                   >
                     {t}
                   </button>
@@ -3229,16 +3220,14 @@ function Alerts({
                     <div
                       key={opt.id}
                       onClick={() => setType(opt.id)}
-                      className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                        isSelected
+                      className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected
                           ? "border-blue-500 bg-blue-50/50 dark:bg-blue-950/30 shadow-sm"
                           : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-transparent"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          isSelected ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-500"
-                        }`}>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isSelected ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                          }`}>
                           {opt.icon}
                         </div>
                         <div>
@@ -3310,11 +3299,10 @@ function Alerts({
 
                 {/* Live Delta feedback */}
                 {priceDelta && (
-                  <div className={`p-2 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 ${
-                    priceDelta.isHigher
+                  <div className={`p-2 rounded-lg text-xs font-mono font-semibold flex items-center gap-1.5 ${priceDelta.isHigher
                       ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/40"
                       : "bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/40"
-                  }`}>
+                    }`}>
                     <Target size={13} />
                     <span>
                       Target is {priceDelta.diffFormatted} ({priceDelta.pctFormatted}) from current market price of ${money(currentPrice)}
@@ -3514,10 +3502,10 @@ function InteractiveChart({
 }) {
   const history = useQuery({ queryKey: ["history", symbol, period], queryFn: () => getHistory(symbol, period) });
   const chartContainerRef = React.useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     if (!chartContainerRef.current || !history.data?.rows) return;
-    
+
     // Clear previous canvas elements if any
     chartContainerRef.current.innerHTML = "";
 
@@ -3604,34 +3592,47 @@ function NewsSentiment({
   const ai = useQuery({ queryKey: ["ai", symbol], queryFn: () => getAiSummary(symbol) });
   const singleNews = useQuery({ queryKey: ["news", symbol], queryFn: () => getNews(symbol) });
 
-  const macroData = marketNewsQuery.data;
-  const articles: MarketNewsArticle[] = macroData?.articles || (macroData as any)?.items || [];
-  const beneficiaries: ImpactedAsset[] = ((macroData?.beneficiaries || []) as any[]).map((b) => ({
+  const isLiveSync = Boolean(
+    marketNewsQuery.data &&
+    marketNewsQuery.data.articles &&
+    marketNewsQuery.data.articles.length > 0 &&
+    !marketNewsQuery.isError
+  );
+  const macroData = isLiveSync ? marketNewsQuery.data! : (marketNewsQuery.data || FALLBACK_MARKET_NEWS_SENTIMENT);
+  const rawArticles = (macroData?.articles && macroData.articles.length > 0)
+    ? macroData.articles
+    : FALLBACK_MARKET_NEWS_SENTIMENT.articles;
+  const articles: MarketNewsArticle[] = rawArticles;
+
+  const rawBeneficiaries = (macroData?.beneficiaries && macroData.beneficiaries.length > 0)
+    ? macroData.beneficiaries
+    : FALLBACK_MARKET_NEWS_SENTIMENT.beneficiaries;
+  const beneficiaries: ImpactedAsset[] = ((rawBeneficiaries || []) as any[]).map((b) => ({
     ...b,
     estimated_impact: b.estimated_impact || b.projected_move || "+2.0%",
     catalysts: b.catalysts || b.catalyst || "Macro sentiment tailwinds",
     sector: b.sector || "Equities & Macro",
   }));
-  const atRisk: ImpactedAsset[] = ((macroData?.at_risk || []) as any[]).map((r) => ({
+
+  const rawAtRisk = (macroData?.at_risk && macroData.at_risk.length > 0)
+    ? macroData.at_risk
+    : FALLBACK_MARKET_NEWS_SENTIMENT.at_risk;
+  const atRisk: ImpactedAsset[] = ((rawAtRisk || []) as any[]).map((r) => ({
     ...r,
     estimated_impact: r.estimated_impact || r.projected_move || "-2.0%",
     catalysts: r.catalysts || r.catalyst || "Downside headline volatility",
     sector: r.sector || "Equities & Macro",
   }));
-  const overall = macroData?.overall_distribution || {
-    positive: (macroData as any)?.positive_pct ?? 45,
-    neutral: (macroData as any)?.neutral_pct ?? 35,
-    negative: (macroData as any)?.negative_pct ?? 20,
-    avg_compound: (macroData as any)?.overall_score ?? 0.18,
-  };
+
+  const overall = macroData?.overall_distribution || FALLBACK_MARKET_NEWS_SENTIMENT.overall_distribution;
   const netScore = overall.avg_compound ?? 0;
   const isMarketBullish = netScore > 0.1;
   const isMarketBearish = netScore < -0.1;
   const marketSentimentLabel = isMarketBullish
     ? "Bullish Momentum"
     : isMarketBearish
-    ? "Bearish Risk Off"
-    : "Neutral Equilibrium";
+      ? "Bearish Risk Off"
+      : "Neutral Equilibrium";
 
   const categories = [
     { label: "All Sectors", value: "all" },
@@ -3688,8 +3689,13 @@ function NewsSentiment({
                 <h1 className="text-2xl font-black font-mono tracking-tight text-slate-900 dark:text-slate-100">
                   Global Catalyst Radar &amp; Market News
                 </h1>
-                <span className="px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 font-mono text-xs text-blue-600 dark:text-blue-400 font-bold border border-blue-200/70 dark:border-blue-800">
-                  TOP 20 DAILY INTEL
+                <span className={`px-2.5 py-0.5 rounded-full font-mono text-xs font-bold border flex items-center gap-1.5 ${
+                  isLiveSync
+                    ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800"
+                    : "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200/70 dark:border-blue-800"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isLiveSync ? "bg-emerald-500 animate-pulse" : "bg-blue-500"}`} />
+                  {isLiveSync ? "LIVE SCRAPED FEED" : "TOP 20 DAILY INTEL"}
                 </span>
                 <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
                   • Refreshes Daily &amp; Auto-Syncs Real-Time Headlines
@@ -3705,22 +3711,20 @@ function NewsSentiment({
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center bg-slate-100 dark:bg-[#1e293b] p-1 rounded-xl border border-slate-200/70 dark:border-slate-700">
               <button
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-                  viewMode === "macro"
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${viewMode === "macro"
                     ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
+                  }`}
                 onClick={() => setViewMode("macro")}
               >
                 <Globe size={14} />
                 <span>Global Macro Top 20</span>
               </button>
               <button
-                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${
-                  viewMode === "single"
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-1.5 ${viewMode === "single"
                     ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
+                  }`}
                 onClick={() => setViewMode("single")}
               >
                 <CandlestickChart size={14} />
@@ -3748,9 +3752,8 @@ function NewsSentiment({
             </span>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span
-                className={`w-2 h-2 rounded-full ${
-                  isMarketBullish ? "bg-emerald-500" : isMarketBearish ? "bg-rose-500" : "bg-amber-500"
-                } animate-pulse`}
+                className={`w-2 h-2 rounded-full ${isMarketBullish ? "bg-emerald-500" : isMarketBearish ? "bg-rose-500" : "bg-amber-500"
+                  } animate-pulse`}
               />
               <span className="text-sm font-black font-mono text-slate-900 dark:text-slate-100">
                 {netScore > 0 ? `+${netScore.toFixed(2)}` : netScore.toFixed(2)}
@@ -3856,13 +3859,12 @@ function NewsSentiment({
                   }}
                 >
                   <div
-                    className={`text-2xl font-black font-mono ${
-                      isMarketBullish
+                    className={`text-2xl font-black font-mono ${isMarketBullish
                         ? "text-emerald-600 dark:text-emerald-400"
                         : isMarketBearish
-                        ? "text-rose-600 dark:text-rose-400"
-                        : "text-amber-600 dark:text-amber-400"
-                    }`}
+                          ? "text-rose-600 dark:text-rose-400"
+                          : "text-amber-600 dark:text-amber-400"
+                      }`}
                   >
                     {netScore > 0 ? `+${netScore.toFixed(2)}` : netScore.toFixed(2)}
                   </div>
@@ -3921,7 +3923,7 @@ function NewsSentiment({
                 AI Macro Synthesis:
               </span>
               {macroData?.macro_synthesis ||
-                "Synthesizing active geopolitical alignments (BRICS), central bank liquidity signals, and enterprise AI capex..."}
+                FALLBACK_MARKET_NEWS_SENTIMENT.macro_synthesis}
             </div>
           </div>
 
@@ -3949,40 +3951,46 @@ function NewsSentiment({
 
               {/* List of Beneficiaries */}
               <div className="flex flex-col gap-3 mt-4">
-                {beneficiaries.slice(0, 4).map((b, i) => (
-                  <div
-                    key={b.symbol || i}
-                    className="p-3 rounded-xl border border-emerald-100/80 dark:border-emerald-900/30 bg-emerald-50/40 dark:bg-emerald-950/20 flex flex-col gap-1.5 hover:border-emerald-400 dark:hover:border-emerald-600/60 transition-all cursor-pointer group"
-                    onClick={() => {
-                      if (setSymbol) setSymbol(b.symbol);
-                      if (setView) setView("stock");
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
-                          {b.symbol}
-                        </span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                          {b.name}
+                {beneficiaries.length === 0 ? (
+                  <div className="py-8 text-center text-xs font-mono text-slate-400 dark:text-slate-500">
+                    No active upside tailwinds identified
+                  </div>
+                ) : (
+                  beneficiaries.slice(0, 4).map((b, i) => (
+                    <div
+                      key={b.symbol || i}
+                      className="p-3 rounded-xl border border-emerald-100/80 dark:border-emerald-900/30 bg-emerald-50/40 dark:bg-emerald-950/20 flex flex-col gap-1.5 hover:border-emerald-400 dark:hover:border-emerald-600/60 transition-all cursor-pointer group"
+                      onClick={() => {
+                        if (setSymbol) setSymbol(b.symbol);
+                        if (setView) setView("stock");
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                            {b.symbol}
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                            {b.name}
+                          </span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded font-mono text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 flex items-center gap-0.5">
+                          <ArrowUpRight size={12} />
+                          {b.estimated_impact}
                         </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded font-mono text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 flex items-center gap-0.5">
-                        <ArrowUpRight size={12} />
-                        {b.estimated_impact}
-                      </span>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-snug">
+                        {b.catalysts}
+                      </p>
+                      <div className="flex items-center justify-between pt-1 text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                        <span>Sector: {b.sector}</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold group-hover:underline flex items-center gap-0.5">
+                          Inspect Stock Lab &gt;
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-snug">
-                      {b.catalysts}
-                    </p>
-                    <div className="flex items-center justify-between pt-1 text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                      <span>Sector: {b.sector}</span>
-                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold group-hover:underline flex items-center gap-0.5">
-                        Inspect Stock Lab &gt;
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -4015,40 +4023,46 @@ function NewsSentiment({
 
               {/* List of Downside Assets */}
               <div className="flex flex-col gap-3 mt-4">
-                {atRisk.slice(0, 4).map((r, i) => (
-                  <div
-                    key={r.symbol || i}
-                    className="p-3 rounded-xl border border-rose-100/80 dark:border-rose-900/30 bg-rose-50/40 dark:bg-rose-950/20 flex flex-col gap-1.5 hover:border-rose-400 dark:hover:border-rose-600/60 transition-all cursor-pointer group"
-                    onClick={() => {
-                      if (setSymbol) setSymbol(r.symbol);
-                      if (setView) setView("stock");
-                    }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-rose-600 dark:group-hover:text-rose-400">
-                          {r.symbol}
-                        </span>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                          {r.name}
+                {atRisk.length === 0 ? (
+                  <div className="py-8 text-center text-xs font-mono text-slate-400 dark:text-slate-500">
+                    No active downside risks identified
+                  </div>
+                ) : (
+                  atRisk.slice(0, 4).map((r, i) => (
+                    <div
+                      key={r.symbol || i}
+                      className="p-3 rounded-xl border border-rose-100/80 dark:border-rose-900/30 bg-rose-50/40 dark:bg-rose-950/20 flex flex-col gap-1.5 hover:border-rose-400 dark:hover:border-rose-600/60 transition-all cursor-pointer group"
+                      onClick={() => {
+                        if (setSymbol) setSymbol(r.symbol);
+                        if (setView) setView("stock");
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 group-hover:text-rose-600 dark:group-hover:text-rose-400">
+                            {r.symbol}
+                          </span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                            {r.name}
+                          </span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded font-mono text-xs font-black text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 flex items-center gap-0.5">
+                          <ArrowDownRight size={12} />
+                          {r.estimated_impact}
                         </span>
                       </div>
-                      <span className="px-2 py-0.5 rounded font-mono text-xs font-black text-rose-700 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 flex items-center gap-0.5">
-                        <ArrowDownRight size={12} />
-                        {r.estimated_impact}
-                      </span>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 leading-snug">
+                        {r.catalysts}
+                      </p>
+                      <div className="flex items-center justify-between pt-1 text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                        <span>Sector: {r.sector}</span>
+                        <span className="text-rose-600 dark:text-rose-400 font-semibold group-hover:underline flex items-center gap-0.5">
+                          View Risk Profile &gt;
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 leading-snug">
-                      {r.catalysts}
-                    </p>
-                    <div className="flex items-center justify-between pt-1 text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                      <span>Sector: {r.sector}</span>
-                      <span className="text-rose-600 dark:text-rose-400 font-semibold group-hover:underline flex items-center gap-0.5">
-                        View Risk Profile &gt;
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -4108,11 +4122,10 @@ function NewsSentiment({
               {categories.map((cat) => (
                 <button
                   key={cat.value}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${
-                    categoryFilter === cat.value
+                  className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition-all ${categoryFilter === cat.value
                       ? "bg-blue-600 text-white shadow-sm font-semibold"
                       : "bg-slate-100 dark:bg-[#1e293b] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200/60 dark:border-slate-700"
-                  }`}
+                    }`}
                   onClick={() => setCategoryFilter(cat.value)}
                 >
                   {cat.label}
@@ -4130,11 +4143,10 @@ function NewsSentiment({
               ].map((item) => (
                 <button
                   key={item.value}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${
-                    filter === item.value
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${filter === item.value
                       ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                       : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                  }`}
+                    }`}
                   onClick={() => setFilter(item.value as any)}
                 >
                   {item.label}
@@ -4187,13 +4199,12 @@ function NewsSentiment({
 
                       {/* Sentiment / Impact Pill */}
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider border ${
-                          isProfit
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider border ${isProfit
                             ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/80"
                             : isLoss
-                            ? "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/80"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                        }`}
+                              ? "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/80"
+                              : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                          }`}
                       >
                         {isProfit ? `🟢 Bullish (+${item.score.toFixed(2)})` : isLoss ? `🔴 Downside (${item.score.toFixed(2)})` : "⚪ Neutral"}
                       </span>
@@ -4317,11 +4328,10 @@ function NewsSentiment({
                   ].map((item) => (
                     <button
                       key={item.value}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${
-                        filter === item.value
+                      className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all ${filter === item.value
                           ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                           : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                      }`}
+                        }`}
                       onClick={() => setFilter(item.value as any)}
                     >
                       {item.label}
@@ -4352,13 +4362,12 @@ function NewsSentiment({
                             {item.published_at ? " • " + new Date(item.published_at).toLocaleDateString() : ""}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider ${
-                              sent === "positive"
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider ${sent === "positive"
                                 ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
                                 : sent === "negative"
-                                ? "bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300"
-                                : "bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
-                            }`}
+                                  ? "bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300"
+                                  : "bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                              }`}
                           >
                             {sent}
                           </span>
@@ -4395,11 +4404,10 @@ function NewsSentiment({
                 {popularTickers.map((t) => (
                   <button
                     key={t}
-                    className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all border ${
-                      symbol.toUpperCase() === t
+                    className={`px-3 py-1.5 rounded-xl font-mono text-xs font-bold transition-all border ${symbol.toUpperCase() === t
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                         : "bg-slate-50 dark:bg-[#1e293b]/60 text-slate-700 dark:text-slate-300 border-slate-200/70 dark:border-slate-700 hover:border-blue-400"
-                    }`}
+                      }`}
                     onClick={() => setSymbol?.(t)}
                   >
                     {t}

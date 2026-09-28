@@ -1,4 +1,5 @@
 import axios from "axios";
+import { FALLBACK_MARKET_NEWS_SENTIMENT } from "../data/newsSentimentFallback";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // In-Memory Token Management (Protects against XSS / LocalStorage exploits)
@@ -458,7 +459,16 @@ export type MarketNewsSentimentResponse = {
 };
 
 export async function getMarketNewsSentiment(): Promise<MarketNewsSentimentResponse> {
-  return (await api.get("/market/news-sentiment")).data;
+  try {
+    const res = await api.get("/market/news-sentiment");
+    if (res.data && Array.isArray(res.data.articles) && res.data.articles.length > 0) {
+      return res.data;
+    }
+    return FALLBACK_MARKET_NEWS_SENTIMENT;
+  } catch (err) {
+    console.warn("Using offline curated fallback for market news sentiment:", err);
+    return FALLBACK_MARKET_NEWS_SENTIMENT;
+  }
 }
 
 export type BackendMarketStatus = {

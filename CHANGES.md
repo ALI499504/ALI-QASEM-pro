@@ -29,3 +29,5 @@ This document lists every file created or modified during the user-facing produc
 | `backend/routers/market.py` | **Modified** | Implemented authoritative `GET /api/market/status` computing 4 market sessions in `America/New_York` timezone, NYSE holiday awareness, and next transition UTC. |
 | `frontend/src/utils/marketStatus.ts` | **Modified** | Upgraded to backend polling, local timezone separation, minute-by-minute countdown, session progress calculation, and state transition detection. |
 | `frontend/src/styles/globals.css` | **Modified** | Added 4-state badges, heartbeat pulse animation, slower pulse, smooth transition ripple/glow, and toast styles. |
+| `frontend/src/data/newsSentimentFallback.ts` | **Created** | Comprehensive offline/curated market news catalysts fallback (20 verified articles, top beneficiaries, and downside risk assets). |
+| `backend/services/analysis_service.py` | **Modified** | Expanded backend fallback catalysts to 20 complete items across all 5 sectors with automated beneficiary and downside mapping. |
