@@ -333,7 +333,6 @@ def detect_impacted_symbols(text: str, category: str) -> list[str]:
     return found[:3]
 
 def get_market_news_sentiment(db: Session) -> dict[str, Any]:
-    global _market_news_cache
     now_ts = time.time()
     if _market_news_cache["data"] and (now_ts - _market_news_cache["timestamp"] < 300):
         return _market_news_cache["data"]
