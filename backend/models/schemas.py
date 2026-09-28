@@ -314,3 +314,16 @@ class ModelConfidenceResponse(BaseModel):
     naive_r2: float | None = None
     dm_statistic: float | None = None
     p_value: float | None = None
+
+
+class MarketStatusResponse(BaseModel):
+    state: Literal["CLOSED", "PRE_MARKET", "REGULAR", "AFTER_HOURS"]
+    label: str
+    next_transition_utc: str
+    next_state: str
+    session_progress_pct: float = 0.0
+    subtext: str = ""
+    eastern_time: str = ""
+    detail: str = ""
+    server_time_utc: str = ""
+

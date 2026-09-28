@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Activity, AlertCircle, Bell, Brain, Briefcase, CandlestickChart, Check, CheckCircle, Copy, ExternalLink, Eye, EyeOff, Gauge, History, LineChart as LineChartIcon, ListPlus, MessageCircle, Moon, Plus, Radar, Search, Send, Star, Sun, Table2, Trash2, Wifi, X, Newspaper, Flame, Settings as SettingsIcon, TrendingUp, TrendingDown, Filter, Download, User, ChevronsUpDown, MoreVertical, SlidersHorizontal, Layers, LayoutGrid, CheckCircle2, Sparkles, Bookmark, Zap, Globe, RefreshCw, ArrowUpRight, ArrowDownRight, ShieldAlert, Volume2, VolumeX, ShieldCheck, Crosshair, Target } from "lucide-react";
+import { Activity, AlertCircle, Bell, Brain, Briefcase, CandlestickChart, Check, CheckCircle, Copy, ExternalLink, Eye, EyeOff, Gauge, History, LineChart as LineChartIcon, ListPlus, MessageCircle, Moon, Sunrise, Plus, Radar, Search, Send, Star, Sun, Table2, Trash2, Wifi, X, Newspaper, Flame, Settings as SettingsIcon, TrendingUp, TrendingDown, Filter, Download, User, ChevronsUpDown, MoreVertical, SlidersHorizontal, Layers, LayoutGrid, CheckCircle2, Sparkles, Bookmark, Zap, Globe, RefreshCw, ArrowUpRight, ArrowDownRight, ShieldAlert, Volume2, VolumeX, ShieldCheck, Crosshair, Target } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -768,31 +768,82 @@ function Topbar({
 
   return (
     <header className="desk-topbar">
+      {market.toastMessage && (
+        <div className="market-toast-banner" role="alert">
+          <span>{market.toastMessage}</span>
+          <button
+            onClick={market.dismissToast}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "inherit",
+              cursor: "pointer",
+              padding: 0,
+              display: "flex",
+              opacity: 0.7,
+            }}
+            title="Dismiss notification"
+            type="button"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       <div className="desk-market-pill-container" ref={scheduleRef}>
-        <button
-          className={`desk-live-pill ${market.status}`}
-          onClick={() => setShowSchedule((prev) => !prev)}
-          title="Click to view US Market Operating Hours & Schedule"
-          type="button"
-        >
-          <span className={`pulse-beacon-dot ${market.status}`}></span>
-          <span className="desk-live-main">LIVE {market.localTime}</span>
-          <span className="desk-live-sep">•</span>
-          <span className="desk-live-label">{market.label}</span>
-          <span className="desk-live-subtext">({market.subtext})</span>
-        </button>
+        <div className="desk-market-pill-wrapper">
+          <button
+            className={`desk-live-pill ${market.status} ${market.state}`}
+            onClick={() => setShowSchedule((prev) => !prev)}
+            title="Click to view US Market Operating Hours & Schedule"
+            type="button"
+          >
+            <span
+              className={`pulse-beacon-dot ${market.status} ${market.state} ${
+                market.isTransitioning ? "transitioning" : ""
+              }`}
+            ></span>
+            {market.state === "PRE_MARKET" && (
+              <Sunrise size={13} className="desk-session-icon" />
+            )}
+            {market.state === "AFTER_HOURS" && (
+              <Moon size={13} className="desk-session-icon" />
+            )}
+            <span
+              className="desk-live-main"
+              title={`Viewer Local System Time (${market.localTzLong})`}
+            >
+              LIVE {market.localTime} <span className="desk-tz-tag">{market.localTz}</span>
+            </span>
+            <span className="desk-live-sep">•</span>
+            <span className="desk-live-label">{market.label}</span>
+            <span className="desk-live-subtext">({market.subtext})</span>
+          </button>
+
+          {market.state === "REGULAR" && (
+            <div
+              className="desk-market-progress-bar-container"
+              title={`Regular Session Elapsed: ${market.sessionProgressPct}% (9:30 AM – 4:00 PM ET)`}
+            >
+              <div
+                className="desk-market-progress-bar-fill"
+                style={{ width: `${market.sessionProgressPct}%` }}
+              />
+            </div>
+          )}
+        </div>
 
         {showSchedule && (
           <div className="desk-market-modal">
             <div className="desk-market-modal-header">
               <div className="desk-market-modal-title">
-                <span className={`desk-market-status-dot ${market.status}`}></span>
+                <span className={`desk-market-status-dot ${market.status} ${market.state}`}></span>
                 <div>
                   <h4>US Equity Markets</h4>
                   <small>NYSE • NASDAQ • CBOE</small>
                 </div>
               </div>
-              <span className={`desk-market-status-tag ${market.status}`}>
+              <span className={`desk-market-status-tag ${market.status} ${market.state}`}>
                 {market.label}
               </span>
             </div>
@@ -800,7 +851,32 @@ function Topbar({
             <div className="desk-market-modal-body">
               <div className="desk-market-info-banner">
                 <strong>{market.detail}</strong>
-                <span>Next Session: {market.nextSession}</span>
+                <span>
+                  {market.state === "CLOSED" && market.countdownText
+                    ? `Countdown: ${market.countdownText}`
+                    : `Next Session: ${market.nextSession}`}
+                </span>
+                {market.state === "REGULAR" && (
+                  <div style={{ marginTop: 8 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: 11,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <span>Session Progress (9:30 AM – 4:00 PM ET)</span>
+                      <strong>{market.sessionProgressPct}%</strong>
+                    </div>
+                    <div className="desk-market-progress-bar-container" style={{ margin: 0 }}>
+                      <div
+                        className="desk-market-progress-bar-fill"
+                        style={{ width: `${market.sessionProgressPct}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="desk-market-clocks-grid">
@@ -809,7 +885,7 @@ function Topbar({
                   <strong>{market.nyTime}</strong>
                 </div>
                 <div className="desk-clock-card">
-                  <small>Local System Time</small>
+                  <small>Local System Time ({market.localTz})</small>
                   <strong>{market.localTime}</strong>
                 </div>
               </div>

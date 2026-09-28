@@ -460,3 +460,19 @@ export type MarketNewsSentimentResponse = {
 export async function getMarketNewsSentiment(): Promise<MarketNewsSentimentResponse> {
   return (await api.get("/market/news-sentiment")).data;
 }
+
+export type BackendMarketStatus = {
+  state: "CLOSED" | "PRE_MARKET" | "REGULAR" | "AFTER_HOURS";
+  label: string;
+  next_transition_utc: string;
+  next_state: string;
+  session_progress_pct: number;
+  subtext: string;
+  eastern_time: string;
+  detail: string;
+  server_time_utc?: string;
+};
+
+export async function getMarketStatus(): Promise<BackendMarketStatus> {
+  return (await api.get("/market/status")).data;
+}
