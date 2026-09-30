@@ -365,6 +365,11 @@ function AppShell() {
     };
   }, []);
 
+  // Instant scroll-to-top when navigating tabs or authenticating
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [view, currentUser]);
+
   async function handleLogout() {
     await logoutUser();
     setCurrentUser(null);
@@ -1604,9 +1609,9 @@ function StockLab({
   const negPct = Number(sentiment.data?.negative_pct ?? 33);
 
   return (
-    <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6 select-none">
+    <div className="stock-lab-root flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 flex flex-col gap-4 sm:gap-6 select-none">
       {/* 1. TOP ASSET HERO & KEY STATS BENTO */}
-      <div className="bg-white dark:bg-[#111827] rounded-2xl p-6 border border-slate-200/80 dark:border-[#1f2937] shadow-sm flex flex-col gap-5">
+      <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 sm:p-6 border border-slate-200/80 dark:border-[#1f2937] shadow-sm flex flex-col gap-4 sm:gap-5">
         {/* Top bar: Asset details and actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-wrap">
@@ -3117,7 +3122,7 @@ function Alerts({
   }, [currentPrice, value]);
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="alerts-root max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 space-y-4 sm:space-y-6">
       {/* Toast feedback banner */}
       {toastMsg && (
         <div className="fixed top-6 right-6 z-50 px-4 py-3 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-semibold text-xs shadow-2xl flex items-center gap-2.5 border border-slate-700 animate-bounce">
@@ -3127,7 +3132,7 @@ function Alerts({
       )}
 
       {/* ── Top Header Bento ─────────────────────────────────── */}
-      <div className="glass-card flex flex-col md:flex-row md:items-center md:justify-between gap-5 p-6 border border-slate-200 dark:border-slate-800/80 rounded-2xl bg-white/70 dark:bg-[#111827]/70 backdrop-blur-xl shadow-sm">
+      <div className="glass-card flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-5 p-4 sm:p-6 border border-slate-200 dark:border-slate-800/80 rounded-2xl bg-white/70 dark:bg-[#111827]/70 backdrop-blur-xl shadow-sm">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1.5">
             <span className="p-1 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
@@ -3786,9 +3791,9 @@ function NewsSentiment({
   const currency = quote.data?.currency || "USD";
 
   return (
-    <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6 select-none">
+    <div className="sentiment-root flex-1 w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-6 flex flex-col gap-4 sm:gap-6 select-none">
       {/* 1. TOP BENTO HEADER: GLOBAL RADAR / SINGLE DEEP DIVE */}
-      <div className="bg-white dark:bg-[#111827] rounded-2xl p-6 border border-slate-200/80 dark:border-[#1f2937] shadow-sm flex flex-col gap-5">
+      <div className="bg-white dark:bg-[#111827] rounded-2xl p-4 sm:p-6 border border-slate-200/80 dark:border-[#1f2937] shadow-sm flex flex-col gap-4 sm:gap-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-100 dark:border-blue-900/60 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold shadow-sm">

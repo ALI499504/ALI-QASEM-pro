@@ -294,12 +294,12 @@ export default function ForecastStudio({ symbol, setSymbol }: ForecastStudioProp
   }
 
   return (
-    <div className="flex-1 w-full px-8 pb-14 pt-4 select-none">
-      <div className="flex flex-col w-full max-w-[1580px] mx-auto space-y-8">
+    <div className="forecast-studio-root flex-1 w-full px-3 sm:px-8 pb-14 pt-3 sm:pt-4 select-none">
+      <div className="flex flex-col w-full max-w-[1580px] mx-auto space-y-4 sm:space-y-8">
         {/* TOP HEADER & CONTROLS BENTO */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-stretch">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-8 items-stretch">
           {/* Title & Asset Selector Card (8 Cols) */}
-          <div className="xl:col-span-8 flex flex-col justify-between bg-white dark:bg-[#111827] rounded-2xl p-8 border border-slate-200/80 dark:border-[#1f2937] shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_25px_-5px_rgba(37,99,235,0.06)] transition-all">
+          <div className="xl:col-span-8 flex flex-col justify-between bg-white dark:bg-[#111827] rounded-2xl p-4 sm:p-8 border border-slate-200/80 dark:border-[#1f2937] shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:shadow-[0_10px_25px_-5px_rgba(37,99,235,0.06)] transition-all">
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-mono text-xs font-semibold tracking-wider uppercase">
                 <span className="material-symbols-outlined text-[18px] text-blue-600 dark:text-blue-400" style={{ fontVariationSettings: "'FILL' 1" }}>

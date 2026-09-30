@@ -2161,15 +2161,71 @@ main { padding: 0; min-width: 0; background: var(--bg-base); min-height: 100vh; 
 
   /* Opportunities card mobile sizing */
   .opp-card {
-    min-height: 72px !important;
+    min-height: 64px !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+  }
+  .opp-title {
+    font-size: 20px !important;
+  }
+  .opp-header {
+    padding: 14px 14px !important;
+    border-radius: 14px !important;
+    gap: 12px !important;
+  }
+  .opp-subtitle {
+    font-size: 12.5px !important;
+    line-height: 1.5 !important;
   }
 
-  /* Floating chat launcher mobile positioning above bottom nav */
+  /* All section page containers: clean mobile padding & bottom clearance */
+  .desk-dashboard-container,
+  .stock-lab-root,
+  .forecast-studio-root,
+  .opp-page,
+  .sentiment-root,
+  .alerts-root,
+  .acc-page {
+    padding: 10px 12px calc(84px + env(safe-area-inset-bottom)) 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Section heading optimizations */
+  .stock-lab-root h1,
+  .forecast-studio-root h1,
+  .sentiment-root h1,
+  .alerts-root h2 {
+    font-size: 20px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Interactive Candlestick and Chart Touch Scrolling */
+  #tv-chart-container, .tv-chart, .chart-container, .recharts-wrapper {
+    touch-action: pan-y !important;
+  }
+
+  /* Floating chat launcher & panel mobile positioning */
   .chat-launcher {
     bottom: calc(76px + env(safe-area-inset-bottom)) !important;
-    right: 16px !important;
-    width: 44px !important;
-    height: 44px !important;
+    right: 14px !important;
+    width: 46px !important;
+    height: 46px !important;
+    z-index: 950 !important;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4) !important;
+  }
+  .chat-panel {
+    position: fixed !important;
+    bottom: calc(76px + env(safe-area-inset-bottom)) !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+    height: calc(100vh - 146px) !important;
+    max-height: calc(100vh - 146px) !important;
+    z-index: 1050 !important;
+    border-radius: 18px !important;
   }
 }
 

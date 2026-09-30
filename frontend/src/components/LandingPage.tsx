@@ -122,79 +122,22 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
 
       {/* Main Container */}
       <main className="auth-main-container">
-        {/* Left Column on Desktop / Top & Bottom on Mobile */}
-        <div className="auth-visuals-col">
-          {/* Hero Intro Header */}
-          <div className="auth-hero-intro">
-            <div className="visuals-badge">
-              <Sparkles size={13} className="sparkle-icon" />
-              <span>AI Quantitative Intelligence</span>
-            </div>
-
-            <h1 className="visuals-headline">
-              Institutional Market Intel &{" "}
-              <span className="highlight-gradient">Predictive Forecasting</span>
-            </h1>
-
-            <p className="visuals-subtext">
-              Real-time market analytics, multi-horizon machine learning price predictions,
-              algorithmic backtesting, and institutional FinBERT news sentiment.
-            </p>
+        {/* Hero Intro Header */}
+        <div className="auth-hero-intro">
+          <div className="visuals-badge">
+            <Sparkles size={13} className="sparkle-icon" />
+            <span>AI Quantitative Intelligence</span>
           </div>
 
-          {/* Visual Capabilities List */}
-          <div className="auth-features-panel">
-            <div className="features-visual-grid">
-              <div className="feature-visual-card">
-                <div className="card-icon-wrap icon-blue">
-                  <BrainCircuit size={19} />
-                </div>
-                <div className="card-content">
-                  <h3>Multi-Horizon ML Forecasts</h3>
-                  <p>Ensemble models with 7-day to 90-day trajectory paths and confidence bands.</p>
-                </div>
-              </div>
+          <h1 className="visuals-headline">
+            Institutional Market Intel &{" "}
+            <span className="highlight-gradient">Predictive Forecasting</span>
+          </h1>
 
-              <div className="feature-visual-card">
-                <div className="card-icon-wrap icon-indigo">
-                  <BarChart3 size={19} />
-                </div>
-                <div className="card-content">
-                  <h3>Algorithmic Backtester</h3>
-                  <p>Simulate momentum, mean reversion & trend strategies with Sharpe & max drawdown metrics.</p>
-                </div>
-              </div>
-
-              <div className="feature-visual-card">
-                <div className="card-icon-wrap icon-emerald">
-                  <Zap size={19} />
-                </div>
-                <div className="card-content">
-                  <h3>FinBERT News Sentiment</h3>
-                  <p>Transformer-based sentiment scoring parsed live across global financial news headlines.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Market sample preview pill */}
-            <div className="market-ticker-pills">
-              <div className="ticker-pill">
-                <span className="ticker-sym">NVDA</span>
-                <span className="ticker-price">$128.40</span>
-                <span className="ticker-up">+4.18%</span>
-              </div>
-              <div className="ticker-pill">
-                <span className="ticker-sym">AAPL</span>
-                <span className="ticker-price">$224.25</span>
-                <span className="ticker-up">+1.12%</span>
-              </div>
-              <div className="ticker-pill">
-                <span className="ticker-sym">BTC</span>
-                <span className="ticker-price">$64,250</span>
-                <span className="ticker-up">+3.85%</span>
-              </div>
-            </div>
-          </div>
+          <p className="visuals-subtext">
+            Real-time market analytics, multi-horizon machine learning price predictions,
+            algorithmic backtesting, and institutional FinBERT news sentiment.
+          </p>
         </div>
 
         {/* Right Column on Desktop / Positioned Immediately After Hero on Mobile */}
@@ -322,6 +265,60 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
                 <ShieldCheck size={14} className="shield-icon" />
                 <span>Encrypted with Bcrypt & backed by MongoDB Vault</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Visual Capabilities List */}
+        <div className="auth-features-panel">
+          <div className="features-visual-grid">
+            <div className="feature-visual-card">
+              <div className="card-icon-wrap icon-blue">
+                <BrainCircuit size={19} />
+              </div>
+              <div className="card-content">
+                <h3>Multi-Horizon ML Forecasts</h3>
+                <p>Ensemble models with 7-day to 90-day trajectory paths and confidence bands.</p>
+              </div>
+            </div>
+
+            <div className="feature-visual-card">
+              <div className="card-icon-wrap icon-indigo">
+                <BarChart3 size={19} />
+              </div>
+              <div className="card-content">
+                <h3>Algorithmic Backtester</h3>
+                <p>Simulate momentum, mean reversion &amp; trend strategies with Sharpe &amp; max drawdown metrics.</p>
+              </div>
+            </div>
+
+            <div className="feature-visual-card">
+              <div className="card-icon-wrap icon-emerald">
+                <Zap size={19} />
+              </div>
+              <div className="card-content">
+                <h3>FinBERT News Sentiment</h3>
+                <p>Transformer-based sentiment scoring parsed live across global financial news headlines.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Market sample preview pill */}
+          <div className="market-ticker-pills">
+            <div className="ticker-pill">
+              <span className="ticker-sym">NVDA</span>
+              <span className="ticker-price">$128.40</span>
+              <span className="ticker-up">+4.18%</span>
+            </div>
+            <div className="ticker-pill">
+              <span className="ticker-sym">AAPL</span>
+              <span className="ticker-price">$224.25</span>
+              <span className="ticker-up">+1.12%</span>
+            </div>
+            <div className="ticker-pill">
+              <span className="ticker-sym">BTC</span>
+              <span className="ticker-price">$64,250</span>
+              <span className="ticker-up">+3.85%</span>
             </div>
           </div>
         </div>

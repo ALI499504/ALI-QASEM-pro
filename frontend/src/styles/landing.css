@@ -218,21 +218,33 @@
   padding: 3rem 2rem;
   display: grid;
   grid-template-columns: 1.15fr 0.95fr;
-  gap: 3.5rem;
-  align-items: center;
+  grid-template-rows: auto 1fr;
+  column-gap: 3.5rem;
+  row-gap: 1.5rem;
+  align-items: start;
 }
 
-.auth-visuals-col {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-/* ─── Hero Intro ───────────────────────────────────────────────────────────── */
 .auth-hero-intro {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.auth-features-panel {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.auth-form-col {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 100%;
 }
 
 .visuals-badge {
@@ -619,19 +631,13 @@
   .auth-main-container {
     display: flex;
     flex-direction: column;
-    gap: 1.75rem;
+    gap: 1.5rem;
     padding: 1.25rem 1.25rem 3rem 1.25rem;
     max-width: 520px;
   }
 
-  /* Unfold visual container so hero intro is top, features are bottom */
-  .auth-visuals-col {
-    display: contents;
-  }
-
   /* 1. Hero Intro on Top */
   .auth-hero-intro {
-    order: 1;
     text-align: center;
     align-items: center;
     gap: 0.85rem;
@@ -651,7 +657,7 @@
 
   /* 2. Auth Form Card in the Center (Immediately accessible!) */
   .auth-form-col {
-    order: 2;
+    width: 100%;
   }
 
   .auth-card {
@@ -670,7 +676,7 @@
 
   /* 3. Features & Market Ticker Below the Form */
   .auth-features-panel {
-    order: 3;
+    width: 100%;
     padding-top: 0.5rem;
   }
 
