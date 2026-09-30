@@ -11,7 +11,6 @@ import {
   EyeOff,
   ArrowRight,
   Database,
-  CheckCircle2,
   AlertCircle,
   Sun,
   Moon,
@@ -91,7 +90,7 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
       <header className="auth-navbar">
         <div className="auth-brand">
           <div className="auth-brand-icon">
-            <TrendingUp size={22} strokeWidth={2.5} />
+            <TrendingUp size={20} strokeWidth={2.5} />
           </div>
           <div className="auth-brand-name">
             <span>StockVision</span>
@@ -102,8 +101,9 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
         <div className="auth-nav-right">
           {dbStatus && (
             <div className={`db-status-chip ${dbStatus.mongodb_connected ? "connected" : "fallback"}`}>
-              <Database size={13} />
-              <span>{dbStatus.mongodb_connected ? "MongoDB Atlas Active" : "Local Storage"}</span>
+              <Database size={13} className="db-icon" />
+              <span className="db-text-full">{dbStatus.mongodb_connected ? "MongoDB Atlas Active" : "Local Database"}</span>
+              <span className="db-text-mobile">{dbStatus.mongodb_connected ? "Atlas" : "Local"}</span>
               <span className="db-dot" />
             </div>
           )}
@@ -120,86 +120,91 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
         </div>
       </header>
 
-      {/* Main Container: Split-screen visual intro + Auth form */}
+      {/* Main Container */}
       <main className="auth-main-container">
-        {/* Left Side: Product visuals & features */}
-        <section className="product-visuals-panel">
-          <div className="visuals-badge">
-            <Sparkles size={14} className="sparkle-icon" />
-            <span>AI-Driven Quantitative Trading Desk</span>
+        {/* Left Column on Desktop / Top & Bottom on Mobile */}
+        <div className="auth-visuals-col">
+          {/* Hero Intro Header */}
+          <div className="auth-hero-intro">
+            <div className="visuals-badge">
+              <Sparkles size={13} className="sparkle-icon" />
+              <span>AI Quantitative Intelligence</span>
+            </div>
+
+            <h1 className="visuals-headline">
+              Institutional Market Intel &{" "}
+              <span className="highlight-gradient">Predictive Forecasting</span>
+            </h1>
+
+            <p className="visuals-subtext">
+              Real-time market analytics, multi-horizon machine learning price predictions,
+              algorithmic backtesting, and institutional FinBERT news sentiment.
+            </p>
           </div>
 
-          <h1 className="visuals-headline">
-            Institutional Market Intel &{" "}
-            <span className="highlight-gradient">Predictive Forecasting</span>
-          </h1>
-
-          <p className="visuals-subtext">
-            Empower your trading decisions with walk-forward machine learning models,
-            real-time algorithmic backtesting, and institutional-grade news sentiment analysis.
-          </p>
-
-          {/* Visual Highlight Cards */}
-          <div className="features-visual-grid">
-            <div className="feature-visual-card">
-              <div className="card-icon-wrap icon-blue">
-                <BrainCircuit size={20} />
+          {/* Visual Capabilities List */}
+          <div className="auth-features-panel">
+            <div className="features-visual-grid">
+              <div className="feature-visual-card">
+                <div className="card-icon-wrap icon-blue">
+                  <BrainCircuit size={19} />
+                </div>
+                <div className="card-content">
+                  <h3>Multi-Horizon ML Forecasts</h3>
+                  <p>Ensemble models with 7-day to 90-day trajectory paths and confidence bands.</p>
+                </div>
               </div>
-              <div className="card-content">
-                <h3>Multi-Horizon ML Forecasts</h3>
-                <p>Ensemble models with 7-day to 90-day trajectory paths and confidence bands.</p>
+
+              <div className="feature-visual-card">
+                <div className="card-icon-wrap icon-indigo">
+                  <BarChart3 size={19} />
+                </div>
+                <div className="card-content">
+                  <h3>Algorithmic Backtester</h3>
+                  <p>Simulate momentum, mean reversion & trend strategies with Sharpe & max drawdown metrics.</p>
+                </div>
+              </div>
+
+              <div className="feature-visual-card">
+                <div className="card-icon-wrap icon-emerald">
+                  <Zap size={19} />
+                </div>
+                <div className="card-content">
+                  <h3>FinBERT News Sentiment</h3>
+                  <p>Transformer-based sentiment scoring parsed live across global financial news headlines.</p>
+                </div>
               </div>
             </div>
 
-            <div className="feature-visual-card">
-              <div className="card-icon-wrap icon-indigo">
-                <BarChart3 size={20} />
+            {/* Market sample preview pill */}
+            <div className="market-ticker-pills">
+              <div className="ticker-pill">
+                <span className="ticker-sym">NVDA</span>
+                <span className="ticker-price">$128.40</span>
+                <span className="ticker-up">+4.18%</span>
               </div>
-              <div className="card-content">
-                <h3>Algorithmic Backtester</h3>
-                <p>Simulate momentum, mean reversion & trend strategies with Sharpe & max drawdown metrics.</p>
+              <div className="ticker-pill">
+                <span className="ticker-sym">AAPL</span>
+                <span className="ticker-price">$224.25</span>
+                <span className="ticker-up">+1.12%</span>
               </div>
-            </div>
-
-            <div className="feature-visual-card">
-              <div className="card-icon-wrap icon-emerald">
-                <Zap size={20} />
+              <div className="ticker-pill">
+                <span className="ticker-sym">BTC</span>
+                <span className="ticker-price">$64,250</span>
+                <span className="ticker-up">+3.85%</span>
               </div>
-              <div className="card-content">
-                <h3>FinBERT News Sentiment</h3>
-                <p>Transformer-based sentiment scoring parsed live across global financial news headlines.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Market sample preview pill */}
-          <div className="market-ticker-pills">
-            <div className="ticker-pill">
-              <span className="ticker-sym">NVDA</span>
-              <span className="ticker-price">$128.40</span>
-              <span className="ticker-up">+4.18%</span>
-            </div>
-            <div className="ticker-pill">
-              <span className="ticker-sym">AAPL</span>
-              <span className="ticker-price">$224.25</span>
-              <span className="ticker-up">+1.12%</span>
-            </div>
-            <div className="ticker-pill">
-              <span className="ticker-sym">BTC</span>
-              <span className="ticker-price">$64,250</span>
-              <span className="ticker-up">+3.85%</span>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Right Side: Clean, spacious Sign In / Sign Up Form */}
-        <section className="auth-form-panel">
+        {/* Right Column on Desktop / Positioned Immediately After Hero on Mobile */}
+        <div className="auth-form-col">
           <div className="auth-card">
-            {/* Mode Switcher Tabs */}
-            <div className="auth-tabs">
+            {/* Segmented iOS-Style Tab Switcher */}
+            <div className="auth-segmented-tabs">
               <button
                 type="button"
-                className={`auth-tab ${mode === "login" ? "active" : ""}`}
+                className={`auth-segment-tab ${mode === "login" ? "active" : ""}`}
                 onClick={() => {
                   setMode("login");
                   setError(null);
@@ -209,7 +214,7 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
               </button>
               <button
                 type="button"
-                className={`auth-tab ${mode === "register" ? "active" : ""}`}
+                className={`auth-segment-tab ${mode === "register" ? "active" : ""}`}
                 onClick={() => {
                   setMode("register");
                   setError(null);
@@ -221,17 +226,17 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
 
             <div className="auth-card-body">
               <div className="auth-header">
-                <h2>{mode === "login" ? "Welcome Back" : "Get Started Free"}</h2>
+                <h2>{mode === "login" ? "Welcome to StockVision" : "Create Account"}</h2>
                 <p>
                   {mode === "login"
-                    ? "Enter your credentials to unlock your quantitative desk."
-                    : "Create your personal trading workspace in seconds."}
+                    ? "Enter your credentials to unlock your trading desk."
+                    : "Setup your quantitative trading workspace in seconds."}
                 </p>
               </div>
 
               {error && (
                 <div className="auth-alert error">
-                  <AlertCircle size={16} />
+                  <AlertCircle size={16} className="alert-icon" />
                   <span>{error}</span>
                 </div>
               )}
@@ -249,6 +254,7 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       autoComplete="email"
+                      inputMode="email"
                     />
                   </div>
                 </div>
@@ -261,7 +267,7 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
                       id="auth-password"
                       type={showPassword ? "text" : "password"}
                       required
-                      placeholder={mode === "register" ? "Min 8 characters (letters + numbers)" : "••••••••"}
+                      placeholder={mode === "register" ? "Min 8 chars (letters + numbers)" : "••••••••"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete={mode === "login" ? "current-password" : "new-password"}
@@ -304,7 +310,7 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
                     <span className="submit-spinner">Verifying credentials...</span>
                   ) : (
                     <>
-                      <span>{mode === "login" ? "Enter Trading Desk" : "Create My Account"}</span>
+                      <span>{mode === "login" ? "Enter Trading Desk" : "Create Free Account"}</span>
                       <ArrowRight size={17} />
                     </>
                   )}
@@ -314,11 +320,11 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
               {/* Security Footnote */}
               <div className="auth-security-footer">
                 <ShieldCheck size={14} className="shield-icon" />
-                <span>Encrypted with 12-round Bcrypt & backed by MongoDB Vault</span>
+                <span>Encrypted with Bcrypt & backed by MongoDB Vault</span>
               </div>
             </div>
           </div>
-        </section>
+        </div>
       </main>
     </div>
   );
