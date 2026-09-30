@@ -140,7 +140,7 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
             </div>
             <div className="inst-brand-title-wrap">
               <span className="inst-brand-title">StockVision</span>
-              <span className="inst-brand-alpha">Alpha</span>
+              <span className="inst-brand-alpha">Pro</span>
             </div>
             <div className="inst-pill-gateway">
               <span className="inst-dot green" />
@@ -227,7 +227,7 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                 className={`terminal-tab-btn ${mode === "register" ? "active" : ""}`}
                 onClick={() => { setMode("register"); setError(null); }}
               >
-                Request Access
+                Create Account
               </button>
             </div>
 
@@ -243,8 +243,8 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                 <h2 className="terminal-title">Terminal Access</h2>
                 <p className="terminal-sub">
                   {mode === "login"
-                    ? "Authenticate with corporate credentials to enter your active desk."
-                    : "Provision institutional credentials for quantitative desk terminal access."}
+                    ? "Enter your email and password to access your active desk."
+                    : "Create your credentials to access your active trading desk."}
                 </p>
               </div>
 
@@ -259,11 +259,7 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                 {/* Email Field */}
                 <div className="terminal-field">
                   <div className="field-top-row">
-                    <label htmlFor="auth-email">INSTITUTIONAL EMAIL</label>
-                    <span className="field-sso-badge">
-                      <span className="inst-dot green" />
-                      Corporate SSO
-                    </span>
+                    <label htmlFor="auth-email">EMAIL</label>
                   </div>
                   <div className="terminal-input-container">
                     <Mail size={16} className="field-icon" />
@@ -271,7 +267,7 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                       id="auth-email"
                       type="email"
                       required
-                      placeholder="trader@quantdesk.capital"
+                      placeholder="trader@stockvision.pro"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       autoComplete="email"
@@ -283,13 +279,13 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                 {/* Password Field */}
                 <div className="terminal-field">
                   <div className="field-top-row">
-                    <label htmlFor="auth-password">SECRET KEY / PASSPHRASE</label>
+                    <label htmlFor="auth-password">PASSWORD</label>
                     <button
                       type="button"
                       className="reset-token-btn"
-                      onClick={() => alert("Please consult your firm's compliance officer or active database administrator to reset institutional credentials.")}
+                      onClick={() => alert("Please consult your administrator or check your email to reset credentials.")}
                     >
-                      Reset Token?
+                      Forgot Password?
                     </button>
                   </div>
                   <div className="terminal-input-container">
@@ -307,7 +303,7 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                       type="button"
                       className="field-eye-btn"
                       onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? "Hide passphrase" : "Show passphrase"}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
@@ -318,7 +314,7 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                 {mode === "register" && (
                   <div className="terminal-field">
                     <div className="field-top-row">
-                      <label htmlFor="auth-confirm-password">CONFIRM PASSPHRASE</label>
+                      <label htmlFor="auth-confirm-password">CONFIRM PASSWORD</label>
                     </div>
                     <div className="terminal-input-container">
                       <Lock size={16} className="field-icon" />
@@ -326,7 +322,7 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                         id="auth-confirm-password"
                         type={showPassword ? "text" : "password"}
                         required
-                        placeholder="Re-enter secret passphrase"
+                        placeholder="Re-enter your password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         autoComplete="new-password"
@@ -343,11 +339,11 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                       checked={retainSession}
                       onChange={(e) => setRetainSession(e.target.checked)}
                     />
-                    <span>Retain Session (12h)</span>
+                    <span>Remember me</span>
                   </label>
                   <div className="fido-key-indicator">
                     <Key size={13} />
-                    <span>FIDO2 Key</span>
+                    <span>2FA Protected</span>
                   </div>
                 </div>
 
@@ -358,10 +354,10 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
                   className="terminal-primary-btn"
                 >
                   {loading ? (
-                    <span className="submit-spinner">Verifying Gateway Access...</span>
+                    <span className="submit-spinner">{mode === "login" ? "Signing In..." : "Creating Account..."}</span>
                   ) : (
                     <>
-                      <span>{mode === "login" ? "Initialize Trading Desk" : "Request Access Clearance"}</span>
+                      <span>{mode === "login" ? "Sign In" : "Create Account"}</span>
                       <ArrowRight size={17} />
                     </>
                   )}
