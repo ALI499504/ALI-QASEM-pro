@@ -12,9 +12,15 @@ venv/
 env.bak/
 venv.bak/
 
-# Environment Variables
+# Environment Variables (never commit real secrets)
 .env
 .env.local
+.env.production
+.env.production.local
+.env.development.local
+# Allow example/template files
+!.env.example
+!**/.env.example
 
 # Databases
 *.db

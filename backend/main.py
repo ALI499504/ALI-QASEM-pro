@@ -24,7 +24,9 @@ app = FastAPI(
 )
 
 cors_origins_raw = os.getenv("CORS_ORIGIN", "http://localhost:5173")
-cors_origins = [o.strip() for o in cors_origins_raw.split(",")]
+cors_origins = [o.strip() for o in cors_origins_raw.split(",") if o.strip()]
+
+# Always include common local dev origins
 cors_origins += [
     "http://localhost:5173",
     "http://localhost:5174",
@@ -33,9 +35,20 @@ cors_origins += [
     "http://127.0.0.1:5174",
     "http://127.0.0.1:5175",
 ]
+
+# Deduplicate while preserving order
+seen: set[str] = set()
+cors_origins_deduped: list[str] = []
+for o in cors_origins:
+    if o not in seen:
+        seen.add(o)
+        cors_origins_deduped.append(o)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    # allow_origin_regex covers ALL *.vercel.app preview + production URLs
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origins=cors_origins_deduped,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
