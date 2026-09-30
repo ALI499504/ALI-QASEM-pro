@@ -76,7 +76,7 @@ import "./styles/globals.css";
   document.documentElement.setAttribute("data-theme", saved);
 })();
 
-type View = "dashboard" | "stock" | "compare" | "screener" | "watchlist" | "alerts" | "calendar" | "forecast" | "opportunities" | "accuracy" | "sentiment" | "settings" | "backtest" | "landing";
+type View = "dashboard" | "stock" | "compare" | "screener" | "watchlist" | "alerts" | "calendar" | "forecast" | "opportunities" | "accuracy" | "sentiment" | "settings" | "backtest";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30000, retry: 1 } },
@@ -513,7 +513,6 @@ function AppShell() {
           badge={triggeredCount > 0 ? `⚡ ${triggeredCount}` : activeAlertsCount > 0 ? String(activeAlertsCount) : undefined}
         />
         <NavButton active={view === "settings"} onClick={() => setView("settings")} icon={<SettingsIcon />} label="Settings" />
-        <NavButton active={view === "landing"} onClick={() => setView("landing")} icon={<Globe />} label="Public Landing" />
 
         <div style={{ flexGrow: 1 }} />
         <DeskUserPill user={currentUser} onLogout={handleLogout} onOpenAuth={() => setAuthModalOpen(true)} setView={setView} />
@@ -544,44 +543,6 @@ function AppShell() {
         {view === "sentiment" && <NewsSentiment symbol={symbol} setSymbol={setSymbol} setView={setView} />}
         {view === "alerts" && <Alerts symbol={symbol} currentUser={currentUser} onOpenAuth={() => setAuthModalOpen(true)} />}
         {view === "settings" && <SettingsView isDark={isDark} onThemeToggle={toggleTheme} />}
-        {view === "landing" && (
-          <div style={{ position: "relative", width: "100%" }}>
-            <div style={{
-              padding: "10px 24px",
-              background: "rgba(37,99,235,0.12)",
-              borderBottom: "1px solid rgba(59,130,246,0.3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}>
-              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)" }}>
-                Landing Page Preview Mode (Signed in as: {currentUser?.email})
-              </span>
-              <button
-                onClick={() => setView("dashboard")}
-                style={{
-                  padding: "5px 14px",
-                  borderRadius: "8px",
-                  background: "#2563eb",
-                  color: "#fff",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Back to Trading Dashboard →
-              </button>
-            </div>
-            <LandingPage
-              onLoginSuccess={(u) => {
-                setCurrentUser(u);
-                qc.invalidateQueries();
-              }}
-              isDark={isDark}
-              onThemeToggle={toggleTheme}
-            />
-          </div>
-        )}
 
         {/* Backwards compatibility views */}
         {view === "compare" && <Compare />}
