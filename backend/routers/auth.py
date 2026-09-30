@@ -353,7 +353,11 @@ def refresh(request: Request, response: Response, db: Session = Depends(get_db))
         clear_refresh_cookie(response)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or revoked refresh token.")
 
-    if token_record.expires_at < datetime.now(timezone.utc):
+    expires_at = token_record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < datetime.now(timezone.utc):
         token_record.revoked_at = utc_now()
         db.commit()
         clear_refresh_cookie(response)

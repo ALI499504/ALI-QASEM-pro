@@ -34,7 +34,7 @@ def init_mongo() -> Tuple[bool, str]:
     Attempt to initialize and connect to MongoDB using MONGODB_URI.
     Returns (success: bool, message: str).
     """
-    global _mongo_client, _mongo_db, _mongo_status
+    global _mongo_client, _mongo_db
 
     uri = get_mongo_uri()
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -146,7 +146,6 @@ def init_mongo() -> Tuple[bool, str]:
 
 
 def is_mongo_available() -> bool:
-    global _mongo_db
     if _mongo_db is None:
         # Try quick connection if configured but not yet connected
         if get_mongo_uri():
