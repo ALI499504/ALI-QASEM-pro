@@ -55,6 +55,15 @@ def init_mongo() -> Tuple[bool, str]:
         import pymongo
         from pymongo.errors import ConnectionFailure, ConfigurationError, ServerSelectionTimeoutError
 
+        # Configure DNS resolver with reliable public DNS fallbacks for Atlas SRV resolution
+        try:
+            import dns.resolver
+            dns.resolver.default_resolver = dns.resolver.Resolver(configure=True)
+            existing_ns = [n for n in dns.resolver.default_resolver.nameservers if n not in ("8.8.8.8", "1.1.1.1")]
+            dns.resolver.default_resolver.nameservers = ["8.8.8.8", "1.1.1.1"] + existing_ns
+        except Exception:
+            pass
+
         # Close previous client if any
         if _mongo_client:
             try:
@@ -62,12 +71,12 @@ def init_mongo() -> Tuple[bool, str]:
             except Exception:
                 pass
 
-        # Connect with 3-second server selection timeout to avoid hanging
+        # Connect with 8-second server selection timeout for cloud Atlas reliability
         client = pymongo.MongoClient(
             uri,
-            serverSelectionTimeoutMS=4000,
-            connectTimeoutMS=4000,
-            socketTimeoutMS=4000,
+            serverSelectionTimeoutMS=8000,
+            connectTimeoutMS=8000,
+            socketTimeoutMS=8000,
             appname="StockVisionPro",
         )
 
