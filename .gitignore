@@ -24,6 +24,7 @@ venv.bak/
 
 # Databases
 *.db
+*.db-journal
 *.sqlite
 *.sqlite3
 backend/stockvision.db

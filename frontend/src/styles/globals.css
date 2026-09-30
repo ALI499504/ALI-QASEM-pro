@@ -1094,78 +1094,200 @@ main { padding: 0; min-width: 0; background: var(--bg-base); min-height: 100vh; 
 .ai-result-card { background: var(--bg-deep); border: 1px solid var(--border-hover); border-radius: 16px; padding: 18px; margin-top: 14px; white-space: pre-line; line-height: 1.7; color: var(--text-secondary); font-size: 14px; }
 .ai-result-card strong { color: var(--primary); }
 .recharts-wrapper, .recharts-surface { outline: none; }
-@media (max-width: 1023px) {
-  .app {
-    grid-template-columns: 76px 1fr;
-  }
-  .sidebar {
-    width: 76px;
-    padding: 22px 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .brand {
-    margin-bottom: 24px;
-    justify-content: center;
-    width: auto;
-  }
-  .brand div {
-    display: none !important;
-  }
-  .nav-button {
-    width: auto;
-    justify-content: center;
-    padding: 13px;
-    border-radius: 12px;
-    margin: 7px auto;
-  }
-  .nav-button span {
-    display: none !important;
-  }
-  
-  .topbar {
-    grid-template-columns: 1fr auto auto;
-    gap: 12px;
-  }
-  .topbar p {
-    display: none;
-  }
-  .page-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
-  }
-  .hero-card, .wide, .full-wide {
-    grid-column: span 2;
-  }
-  .index-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-column: span 2;
-    gap: 12px;
-  }
-  .screener-filters {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+/* ═══════════════════════════════════════════════════════
+   RESPONSIVE DESIGN & MOBILE OPTIMIZATION
+   (1023px and below: Full Mobile Web App Layout)
+   (1024px and above: Pristine Desktop / Laptop Desk)
+   ═══════════════════════════════════════════════════════ */
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
+  /* Layout Architecture */
   .app {
-    grid-template-columns: 1fr;
-    display: block;
+    display: block !important;
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
   }
-  .sidebar {
+  .sidebar, aside.sidebar {
     display: none !important;
   }
-  .topbar {
+  .topbar, .desk-topbar {
     display: none !important;
+  }
+  .mobile-header {
+    display: flex !important;
+  }
+  .mobile-bottom-nav {
+    display: block !important;
   }
   main {
-    padding: 16px 16px 84px !important;
-    margin-top: 56px;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin-top: 56px !important;
+    margin-bottom: 74px !important;
+    overflow-x: hidden !important;
   }
+
+  /* Dashboard Container & Spacing */
+  .desk-dashboard-container {
+    padding: 12px 14px 20px 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  /* 6 Indices: Horizontal Swipeable Touch Track (Robinhood/TradingView style) */
+  .desk-indices-grid {
+    display: flex !important;
+    overflow-x: auto !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+    padding: 4px 2px 8px 2px !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .desk-indices-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .desk-index-card {
+    flex: 0 0 162px !important;
+    min-width: 162px !important;
+    scroll-snap-align: start;
+    padding: 11px 12px !important;
+    border-radius: 12px !important;
+  }
+  .index-price-row {
+    font-size: 16px !important;
+  }
+  .index-sparkline-svg {
+    height: 28px !important;
+  }
+
+  /* Main Dashboard Grid: Stack into 1 clean mobile column */
+  .desk-main-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    width: 100% !important;
+  }
+  .desk-card {
+    padding: 14px 14px 16px 14px !important;
+    margin-bottom: 0 !important;
+    border-radius: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Card Headers & Switchers on Mobile */
+  .desk-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+  .desk-segmented-pills {
+    width: 100% !important;
+    display: flex !important;
+  }
+  .desk-seg-btn {
+    flex: 1 !important;
+    text-align: center !important;
+    padding: 6px 0 !important;
+    font-size: 11px !important;
+  }
+
+  /* Top Movers Table: Mobile-optimized columns */
+  .desk-table-head, .desk-table-row {
+    grid-template-columns: 2fr 1.1fr 1.1fr 20px !important;
+    gap: 6px !important;
+    padding: 8px 6px !important;
+  }
+  .desk-table-head span:nth-child(4),
+  .desk-table-row > div:nth-child(4) {
+    display: none !important; /* Hide mini SVG sparkline in row so text is legible */
+  }
+  .desk-entity-cell {
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+  .desk-entity-monogram {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 10px !important;
+    border-radius: 6px !important;
+  }
+  .desk-entity-sym {
+    font-size: 12.5px !important;
+  }
+  .desk-entity-name {
+    font-size: 10px !important;
+    max-width: 85px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+  .desk-price-cell {
+    font-size: 12.5px !important;
+  }
+  .desk-chg-pill {
+    font-size: 10.5px !important;
+    padding: 2px 6px !important;
+  }
+
+  /* Sector Heat & Breadth */
+  .sectors-grid-4x2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .sector-tile-desk {
+    padding: 8px 10px !important;
+    border-radius: 8px !important;
+  }
+  .sector-name-txt {
+    font-size: 11px !important;
+  }
+  .sector-pct-txt {
+    font-size: 11px !important;
+  }
+  .breadth-status-pill {
+    padding: 4px 8px !important;
+    font-size: 10.5px !important;
+  }
+  .breadth-ratio-labels {
+    font-size: 10.5px !important;
+  }
+
+  /* Fear & Greed Gauge */
+  .fg-gauge-center-wrap {
+    display: flex !important;
+    justify-content: center !important;
+  }
+  .fg-gauge-center-wrap svg {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  .fg-history-grid {
+    gap: 2px !important;
+  }
+  .fg-hist-col {
+    padding: 6px 2px !important;
+  }
+  .fg-hist-label {
+    font-size: 9.5px !important;
+  }
+  .fg-hist-val {
+    font-size: 11px !important;
+  }
+
+  /* Generic Grid Views */
   .page-grid {
     grid-template-columns: 1fr !important;
-    gap: 12px;
+    gap: 12px !important;
   }
   .hero-card, .wide, .full-wide {
     grid-column: span 1 !important;
@@ -1175,7 +1297,7 @@ main { padding: 0; min-width: 0; background: var(--bg-base); min-height: 100vh; 
     grid-column: span 1 !important;
   }
   .hero-card h2 {
-    font-size: 24px !important;
+    font-size: 20px !important;
   }
   .table button, .stock-hero {
     grid-template-columns: 1fr !important;
@@ -1188,6 +1310,30 @@ main { padding: 0; min-width: 0; background: var(--bg-base); min-height: 100vh; 
   }
   .screener-filters {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* Desktop Safeguard: Guarantees PC & Laptop Desks Remain 100% Pristine */
+@media (min-width: 1024px) {
+  .mobile-header {
+    display: none !important;
+  }
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+  .sidebar, aside.sidebar {
+    display: flex !important;
+  }
+  .desk-topbar {
+    display: flex !important;
+  }
+  .desk-indices-grid {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
+  }
+  .desk-main-grid {
+    display: grid !important;
+    grid-template-columns: 1.65fr 1fr !important;
   }
 }
 
@@ -1552,10 +1698,10 @@ main { padding: 0; min-width: 0; background: var(--bg-base); min-height: 100vh; 
 
 /* ═══════════════════════════════════════════════════════
    V2 PREMIUM MOBILE & TABLET LAYOUTS
-   (767px and below: mobile sticky header, bottom navigation)
+   (1023px and below: mobile sticky header, bottom navigation)
 ═══════════════════════════════════════════════════════ */
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   /* --- Interactive Touch Elements & General Padding --- */
   .mobile-bottom-nav, .mobile-header, .mobile-search-modal {
     font-family: "Plus Jakarta Sans", sans-serif;

@@ -332,8 +332,8 @@ function AppShell() {
   };
 
   const width = useWindowWidth();
-  const isMobile = width < 768;
-  const isTablet = width >= 768 && width < 1024;
+  const isMobile = width < 1024;
+  const isTablet = false;
 
   const qc = useQueryClient();
 
@@ -514,18 +514,20 @@ function AppShell() {
         <DeskUserPill user={currentUser} onLogout={handleLogout} onOpenAuth={() => setAuthModalOpen(true)} setView={setView} />
       </aside>
       <main>
-        <Topbar
-          symbol={symbol}
-          setSymbol={setSymbol}
-          setView={setView}
-          live={live}
-          isDark={isDark}
-          onThemeToggle={toggleTheme}
-          alertsCount={activeAlertsCount}
-          triggeredCount={triggeredCount}
-          user={currentUser}
-          onOpenAuth={() => setAuthModalOpen(true)}
-        />
+        {!isMobile && (
+          <Topbar
+            symbol={symbol}
+            setSymbol={setSymbol}
+            setView={setView}
+            live={live}
+            isDark={isDark}
+            onThemeToggle={toggleTheme}
+            alertsCount={activeAlertsCount}
+            triggeredCount={triggeredCount}
+            user={currentUser}
+            onOpenAuth={() => setAuthModalOpen(true)}
+          />
+        )}
         <TickerTape quotes={ticker} />
         {view === "dashboard" && <Dashboard setSymbol={setSymbol} setView={setView} />}
         {view === "stock" && <StockLab symbol={symbol} setSymbol={setSymbol} setView={setView} isDark={isDark} />}
