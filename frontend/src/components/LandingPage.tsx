@@ -42,12 +42,6 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
       .catch(() => {});
   }, []);
 
-  const handleFillDemo = () => {
-    setEmail("trader@stockvision.pro");
-    setPassword("Trader12345");
-    setError(null);
-  };
-
   const isPasswordValid =
     password.length >= 8 && /[a-zA-Z]/.test(password) && /[0-9]/.test(password);
 
@@ -260,19 +254,7 @@ export function LandingPage({ onLoginSuccess, isDark, onThemeToggle }: LandingPa
                 </div>
 
                 <div className="form-group">
-                  <div className="label-row">
-                    <label htmlFor="auth-password">Password</label>
-                    {mode === "login" && (
-                      <button
-                        type="button"
-                        className="demo-autofill-btn"
-                        onClick={handleFillDemo}
-                        title="Auto-fill sample demo account"
-                      >
-                        ⚡ Fill Demo Account
-                      </button>
-                    )}
-                  </div>
+                  <label htmlFor="auth-password">Password</label>
                   <div className="input-wrap">
                     <Lock size={16} className="input-icon" />
                     <input

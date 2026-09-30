@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Lock, Mail, AlertCircle, CheckCircle2, ShieldCheck, ArrowRight, Eye, EyeOff, Database, Sparkles } from "lucide-react";
+import { X, Lock, Mail, AlertCircle, CheckCircle2, ShieldCheck, ArrowRight, Eye, EyeOff, Database } from "lucide-react";
 import { loginUser, registerUser, UserProfile } from "../api/client";
 
 interface AuthModalProps {
@@ -30,12 +30,6 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
   const hasLetter = /[a-zA-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
   const isPasswordValid = hasMinLength && hasLetter && hasNumber;
-
-  const handleFillDemo = () => {
-    setEmail("trader@stockvision.pro");
-    setPassword("Trader12345");
-    setError(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,19 +153,9 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                Password
-              </label>
-              <button
-                type="button"
-                onClick={handleFillDemo}
-                className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <Sparkles size={11} />
-                <span>Fill Sample</span>
-              </button>
-            </div>
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              Password
+            </label>
             <div className="relative flex items-center">
               <span className="absolute left-3 text-slate-400">
                 <Lock size={16} />
