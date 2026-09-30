@@ -14,7 +14,8 @@ export type View =
   | "watchlist"
   | "calendar"
   | "accuracy"
-  | "backtest";
+  | "backtest"
+  | "landing";
 
 interface MobileHeaderProps {
   currentView: View;

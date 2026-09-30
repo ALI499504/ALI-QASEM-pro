@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { X, Lock, Mail, AlertCircle, CheckCircle2, ShieldCheck, ArrowRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, Lock, Mail, AlertCircle, CheckCircle2, ShieldCheck, ArrowRight, Eye, EyeOff, Database, Sparkles } from "lucide-react";
 import { loginUser, registerUser, UserProfile } from "../api/client";
 
 interface AuthModalProps {
@@ -13,8 +13,16 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
   const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setError(null);
+    }
+  }, [isOpen, initialMode]);
 
   if (!isOpen) return null;
 
@@ -22,6 +30,12 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
   const hasLetter = /[a-zA-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
   const isPasswordValid = hasMinLength && hasLetter && hasNumber;
+
+  const handleFillDemo = () => {
+    setEmail("trader@stockvision.pro");
+    setPassword("Trader12345");
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +69,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-in fade-in duration-200">
       <div
         className="relative w-full max-w-md bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -77,7 +91,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            aria-label="Close"
           >
             <X size={18} />
           </button>
@@ -87,7 +102,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
         <div className="flex border-b border-slate-100 dark:border-slate-800">
           <button
             type="button"
-            className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 ${
+            className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
               mode === "login"
                 ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/20 dark:bg-blue-950/20"
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
@@ -101,7 +116,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
           </button>
           <button
             type="button"
-            className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 ${
+            className={`flex-1 py-3 text-xs font-bold transition-all border-b-2 cursor-pointer ${
               mode === "register"
                 ? "border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50/20 dark:bg-blue-950/20"
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
@@ -144,21 +159,39 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-              Password
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                Password
+              </label>
+              <button
+                type="button"
+                onClick={handleFillDemo}
+                className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Sparkles size={11} />
+                <span>Fill Sample</span>
+              </button>
+            </div>
             <div className="relative flex items-center">
               <span className="absolute left-3 text-slate-400">
                 <Lock size={16} />
               </span>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                className="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
             </div>
 
             {/* Password Validation checklist in register mode */}
@@ -188,10 +221,19 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
             )}
           </div>
 
+          {/* Security Guarantee Pill */}
+          <div className="p-2.5 rounded-xl bg-slate-100/70 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <Database size={12} className="text-emerald-500" />
+              <span>MongoDB Cloud Vault</span>
+            </span>
+            <span className="font-mono text-emerald-500 font-bold">100% Bcrypt Salted</span>
+          </div>
+
           <button
             type="submit"
             disabled={loading || (mode === "register" && !isPasswordValid)}
-            className="mt-2 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+            className="mt-1 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
           >
             <span>{loading ? "Authenticating..." : mode === "login" ? "Sign In to Desk" : "Create Workspace Account"}</span>
             {!loading && <ArrowRight size={14} />}
@@ -207,7 +249,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
                 setMode(mode === "login" ? "register" : "login");
                 setError(null);
               }}
-              className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
+              className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer"
             >
               {mode === "login" ? "Create Account" : "Sign In"}
             </button>

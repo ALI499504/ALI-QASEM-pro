@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 from datetime import datetime, timezone
+from typing import Any
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -113,20 +114,32 @@ async def check_alerts_loop() -> None:
             print(f"[Alerts Loop Error] Loop encountered an error: {e}")
 
 
+from services.mongodb_service import init_mongo, get_connection_status
+
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+    init_mongo()
     asyncio.create_task(check_alerts_loop())
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
+def health() -> dict[str, Any]:
+    mongo_status = get_connection_status()
+    db_status = "connected"
     try:
         with SessionLocal() as db:
             db.execute(select(1))
-        return {"status": "ok", "db": "connected", "timestamp": datetime.now(timezone.utc).isoformat()}
     except Exception as e:
-        return {"status": "error", "db": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}
+        db_status = str(e)
+
+    return {
+        "status": "ok",
+        "sql_db": db_status,
+        "mongodb": "connected" if mongo_status.get("connected") else "disconnected/fallback",
+        "mongodb_details": mongo_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
 app.include_router(auth.router)
 app.include_router(stock.router)

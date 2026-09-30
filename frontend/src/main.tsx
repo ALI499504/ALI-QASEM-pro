@@ -63,6 +63,7 @@ import ForecastOpportunities from "./components/ForecastOpportunities";
 import ForecastAccuracy from "./components/ForecastAccuracy";
 import BacktestingStudio from "./components/BacktestingStudio";
 import { AuthModal } from "./components/AuthModal";
+import { LandingPage } from "./components/LandingPage";
 import MobileHeader from "./components/MobileHeader";
 import MobileBottomNav from "./components/MobileBottomNav";
 import MobileSearchModal from "./components/MobileSearchModal";
@@ -75,7 +76,7 @@ import "./styles/globals.css";
   document.documentElement.setAttribute("data-theme", saved);
 })();
 
-type View = "dashboard" | "stock" | "compare" | "screener" | "watchlist" | "alerts" | "calendar" | "forecast" | "opportunities" | "accuracy" | "sentiment" | "settings" | "backtest";
+type View = "dashboard" | "stock" | "compare" | "screener" | "watchlist" | "alerts" | "calendar" | "forecast" | "opportunities" | "accuracy" | "sentiment" | "settings" | "backtest" | "landing";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30000, retry: 1 } },
@@ -318,6 +319,7 @@ function AppShell() {
   const [symbol, setSymbol] = useState("AAPL");
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [isDark, setIsDark] = useState(() => localStorage.getItem("sv_theme") === "dark");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -337,11 +339,20 @@ function AppShell() {
 
   useEffect(() => {
     getCurrentUser()
-      .then((u) => setCurrentUser(u))
+      .then((u) => {
+        setCurrentUser(u);
+        setAuthLoading(false);
+      })
       .catch(() => {
         refreshUserToken()
-          .then((r) => setCurrentUser(r.user))
-          .catch(() => setCurrentUser(null));
+          .then((r) => {
+            setCurrentUser(r.user);
+            setAuthLoading(false);
+          })
+          .catch(() => {
+            setCurrentUser(null);
+            setAuthLoading(false);
+          });
       });
 
     const onLogoutEv = () => setCurrentUser(null);
@@ -374,6 +385,64 @@ function AppShell() {
     refetchInterval: 20000,
   });
   const triggeredCount = (triggeredAlertsQuery.data || []).length;
+
+  // Initial authentication check
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: isDark ? "#0b0f19" : "#f4f6fa",
+          color: isDark ? "#f8fafc" : "#0f172a",
+          fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+        }}
+      >
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            background: "linear-gradient(135deg, #2563eb, #3b82f6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            marginBottom: 16,
+            boxShadow: "0 8px 24px rgba(37,99,235,0.35)",
+          }}
+        >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+            <polyline points="16 7 22 7 22 13" />
+          </svg>
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px" }}>
+          StockVision <span style={{ color: "#3b82f6" }}>PRO DESK</span>
+        </div>
+        <div style={{ fontSize: 12, color: isDark ? "#94a3b8" : "#64748b", marginTop: 8 }}>
+          Verifying encrypted session...
+        </div>
+      </div>
+    );
+  }
+
+  // Strict Access Gate: If unauthenticated, user CANNOT access trading desk!
+  if (!currentUser) {
+    return (
+      <LandingPage
+        onLoginSuccess={(u) => {
+          setCurrentUser(u);
+          qc.invalidateQueries();
+        }}
+        isDark={isDark}
+        onThemeToggle={toggleTheme}
+      />
+    );
+  }
 
   return (
     <div className="app">
@@ -439,6 +508,7 @@ function AppShell() {
           badge={triggeredCount > 0 ? `⚡ ${triggeredCount}` : activeAlertsCount > 0 ? String(activeAlertsCount) : undefined}
         />
         <NavButton active={view === "settings"} onClick={() => setView("settings")} icon={<SettingsIcon />} label="Settings" />
+        <NavButton active={view === "landing"} onClick={() => setView("landing")} icon={<Globe />} label="Public Landing" />
 
         <div style={{ flexGrow: 1 }} />
         <DeskUserPill user={currentUser} onLogout={handleLogout} onOpenAuth={() => setAuthModalOpen(true)} setView={setView} />
@@ -467,6 +537,44 @@ function AppShell() {
         {view === "sentiment" && <NewsSentiment symbol={symbol} setSymbol={setSymbol} setView={setView} />}
         {view === "alerts" && <Alerts symbol={symbol} currentUser={currentUser} onOpenAuth={() => setAuthModalOpen(true)} />}
         {view === "settings" && <SettingsView isDark={isDark} onThemeToggle={toggleTheme} />}
+        {view === "landing" && (
+          <div style={{ position: "relative", width: "100%" }}>
+            <div style={{
+              padding: "10px 24px",
+              background: "rgba(37,99,235,0.12)",
+              borderBottom: "1px solid rgba(59,130,246,0.3)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--text-primary)" }}>
+                Landing Page Preview Mode (Signed in as: {currentUser?.email})
+              </span>
+              <button
+                onClick={() => setView("dashboard")}
+                style={{
+                  padding: "5px 14px",
+                  borderRadius: "8px",
+                  background: "#2563eb",
+                  color: "#fff",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Back to Trading Dashboard →
+              </button>
+            </div>
+            <LandingPage
+              onLoginSuccess={(u) => {
+                setCurrentUser(u);
+                qc.invalidateQueries();
+              }}
+              isDark={isDark}
+              onThemeToggle={toggleTheme}
+            />
+          </div>
+        )}
 
         {/* Backwards compatibility views */}
         {view === "compare" && <Compare />}

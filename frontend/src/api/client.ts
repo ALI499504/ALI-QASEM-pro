@@ -205,6 +205,21 @@ export async function getCurrentUser(): Promise<UserProfile> {
   return (await api.get("/auth/me")).data;
 }
 
+export type DatabaseStatusResponse = {
+  mongodb_configured: boolean;
+  mongodb_connected: boolean;
+  primary_auth_database: string;
+  database_name: string | null;
+  collections: string[];
+  error_details: string | null;
+  encryption: string;
+  timestamp: string;
+};
+
+export async function getDatabaseStatus(): Promise<DatabaseStatusResponse> {
+  return (await api.get("/auth/database-status")).data;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Per-User Scoped Watchlists
 // ─────────────────────────────────────────────────────────────────────────────
