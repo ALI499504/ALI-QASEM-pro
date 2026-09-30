@@ -4,7 +4,8 @@ import hashlib
 import math
 import statistics
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from typing import Any
 
 import numpy as np
@@ -20,13 +21,88 @@ from services import technical_service
 from services.data_service import get_company_info, get_history_df, get_quote, search_stocks
 from services.stock_universe import STOCK_UNIVERSE, infer_exchange
 
-ECON_EVENTS = [
-    {"date": "2026-05-06", "event": "Fed Interest Rate Decision"},
-    {"date": "2026-05-07", "event": "US Non-Farm Payrolls"},
-    {"date": "2026-05-08", "event": "US CPI YoY"},
-    {"date": "2026-05-08", "event": "RBI Monetary Policy Decision"},
-    {"date": "2026-05-14", "event": "India GDP Flash Estimate (Q4 FY26)"},
-]
+
+def get_dynamic_econ_events(as_of: datetime | None = None) -> list[dict[str, str]]:
+    """
+    Dynamically generates macroeconomic calendar events aligned with the active timeline.
+    Returns upcoming chronological events relative to as_of (default: current UTC time).
+    """
+    if as_of is None:
+        as_of = datetime.now(timezone.utc)
+    current_year = as_of.year
+    current_month = as_of.month
+    events: list[dict[str, str]] = []
+    
+    for month_offset in range(0, 6):
+        total_months = current_month - 1 + month_offset
+        y = current_year + (total_months // 12)
+        m = (total_months % 12) + 1
+        
+        def fmt(d: int) -> str:
+            return f"{y:04d}-{m:02d}-{d:02d}"
+        
+        first_day_of_month = date(y, m, 1)
+        day_diff = (4 - first_day_of_month.weekday()) % 7
+        first_friday_day = 1 + day_diff
+        
+        events.append({"date": fmt(1), "event": "ISM Manufacturing PMI"})
+        events.append({"date": fmt(first_friday_day), "event": "US Non-Farm Payrolls & Unemployment Rate"})
+        
+        cpi_day = 10 if date(y, m, 10).weekday() < 5 else (12 if date(y, m, 10).weekday() == 5 else 11)
+        events.append({"date": fmt(cpi_day), "event": "US CPI YoY (Inflation Print)"})
+        events.append({"date": fmt(min(cpi_day + 1, 28)), "event": "US PPI MoM (Producer Prices)"})
+        events.append({"date": fmt(14), "event": "US Retail Sales MoM"})
+        events.append({"date": fmt(15), "event": "India Trade Balance & Exports"})
+        
+        first_tue_diff = (1 - first_day_of_month.weekday()) % 7
+        events.append({"date": fmt(1 + first_tue_diff + 14), "event": "US Housing Starts & Building Permits"})
+        
+        first_thu_diff = (3 - first_day_of_month.weekday()) % 7
+        events.append({"date": fmt(1 + first_thu_diff + 14), "event": "Eurozone CPI Final Confirmation"})
+        
+        first_wed_diff = (2 - first_day_of_month.weekday()) % 7
+        events.append({"date": fmt(1 + first_wed_diff + 21), "event": "US Durable Goods Orders"})
+        
+        if m == 12:
+            last_day_of_month = date(y + 1, 1, 1) - timedelta(days=1)
+        else:
+            last_day_of_month = date(y, m + 1, 1) - timedelta(days=1)
+        last_fri_diff = (last_day_of_month.weekday() - 4) % 7
+        last_friday_day = last_day_of_month.day - last_fri_diff
+        events.append({"date": fmt(last_friday_day), "event": "US Core PCE Price Index (Fed's Preferred Gauge)"})
+        
+        if m in (1, 3, 5, 6, 7, 9, 11, 12):
+            fomc_day = 17 if m in (3, 6, 9, 12) else (5 if m in (5, 11) else 28)
+            events.append({"date": fmt(fomc_day), "event": "Fed FOMC Interest Rate Decision"})
+            events.append({"date": fmt(min(fomc_day + 14, 28)), "event": "FOMC Meeting Minutes Release"})
+            
+        if m in (2, 4, 6, 8, 10, 12):
+            events.append({"date": fmt(8), "event": "RBI Monetary Policy Committee (MPC) Decision"})
+            
+        if m in (1, 4, 7, 10):
+            q_num = ((m - 1) // 3) or 4
+            events.append({"date": fmt(26), "event": f"US GDP Advance Estimate (Q{q_num})"})
+            
+        if m in (2, 5, 8, 11):
+            q_num = ((m - 1) // 3) or 4
+            events.append({"date": fmt(28), "event": f"India GDP Growth Estimate (Q{q_num})"})
+            
+    events.sort(key=lambda x: x["date"])
+    unique: list[dict[str, str]] = []
+    seen = set()
+    for ev in events:
+        k = (ev["date"], ev["event"])
+        if k not in seen:
+            seen.add(k)
+            unique.append(ev)
+            
+    today_str = as_of.strftime("%Y-%m-%d")
+    upcoming = [ev for ev in unique if ev["date"] >= today_str]
+    return upcoming
+
+
+# Dynamic calendar snapshot aligned with active timeline
+ECON_EVENTS = get_dynamic_econ_events()
 
 
 def _safe(value: Any) -> float | None:
@@ -988,9 +1064,38 @@ def chat_answer(message: str, symbols: list[str], db: Session) -> dict[str, Any]
         except Exception:
             context.append(f"{symbol}: data unavailable right now")
 
+    # Timeline / Date / Market Session handler
+    timeline_keywords = [
+        "today's date", "todays date", "today date", "what is today", "what day is it",
+        "current date", "what is the date", "what date is today", "timeline", "market session",
+        "is market open", "market status", "market hours", "what time is it", "current time", "what day"
+    ]
+    if any(k in message_lower for k in timeline_keywords):
+        try:
+            from routers.market import compute_market_status, ET_TZ
+            now_utc = datetime.now(timezone.utc)
+            now_et = now_utc.astimezone(ET_TZ)
+            status = compute_market_status(now_utc)
+            upcoming = get_dynamic_econ_events(now_utc)
+            next_ev = f"Next major catalyst: {upcoming[0]['date']} - {upcoming[0]['event']}." if upcoming else ""
+            
+            date_str = now_et.strftime("%A, %B %d, %Y")
+            time_str = now_et.strftime("%I:%M %p ET")
+            utc_str = now_utc.strftime("%Y-%m-%d %H:%M UTC")
+            answer = (
+                f"Today's Date & Market Timeline:\n"
+                f"- Active Date: {date_str} ({time_str} / {utc_str})\n"
+                f"- Market Session: {status.label} ({status.subtext})\n"
+                f"- Session Note: {status.detail}\n\n"
+                f"{next_ev}\n"
+                f"You can ask me 'Upcoming macro events' or check the Econ Calendar for upcoming releases."
+            )
+        except Exception:
+            now_utc = datetime.now(timezone.utc)
+            answer = f"Today's active date is {now_utc.strftime('%A, %B %d, %Y')} ({now_utc.strftime('%H:%M UTC')})."
+
     # Greeting handler
-    greetings = ["hello", "hi", "hey", "good morning", "good evening", "what's up", "howdy"]
-    if any(g in message_lower for g in greetings):
+    elif any(g in message_lower for g in ["hello", "hi", "hey", "good morning", "good evening", "what's up", "howdy"]):
         q = quotes.get(primary)
         s = signals.get(primary)
         if q and s:
@@ -1004,12 +1109,29 @@ def chat_answer(message: str, symbols: list[str], db: Session) -> dict[str, Any]
         else:
             answer = f"Hey! I'm StockVision AI. I can help you analyze {primary} — signals, forecasts, risk, or comparisons. What would you like to know?"
 
-    elif any(token in message_lower for token in ["calendar", "event", "econ", "fomc", "cpi", "payroll"]):
-        upcoming = "\n".join(f"- {item['date']}: {item['event']}" for item in ECON_EVENTS[:5])
+    elif any(token in message_lower for token in ["calendar", "event", "econ", "fomc", "cpi", "payroll", "macro", "upcoming"]):
+        upcoming_events = get_dynamic_econ_events()
+        now_dt = datetime.now(timezone.utc).date()
+        formatted_list = []
+        for item in upcoming_events[:5]:
+            try:
+                ev_date = datetime.strptime(item["date"], "%Y-%m-%d").date()
+                diff_days = (ev_date - now_dt).days
+                rel = "Today" if diff_days == 0 else "Tomorrow" if diff_days == 1 else f"In {diff_days} days"
+                formatted_list.append(f"- {item['date']} ({rel}): {item['event']}")
+            except Exception:
+                formatted_list.append(f"- {item['date']}: {item['event']}")
+        
+        upcoming_str = "\n".join(formatted_list)
+        try:
+            from routers.market import ET_TZ
+            now_et_str = datetime.now(timezone.utc).astimezone(ET_TZ).strftime("%B %d, %Y")
+        except Exception:
+            now_et_str = datetime.now(timezone.utc).strftime("%B %d, %Y")
         answer = (
-            "Upcoming macro events to track:\n"
-            f"{upcoming}\n\n"
-            "Open the Econ Calendar tab for the full schedule and impact levels."
+            f"Upcoming macro events to track (as of {now_et_str}):\n"
+            f"{upcoming_str}\n\n"
+            "Open the Econ Calendar tab for the full dynamic schedule, consensus forecasts, and historical impact levels."
         )
 
     elif "compare" in message_lower or len(clean_symbols) > 1:

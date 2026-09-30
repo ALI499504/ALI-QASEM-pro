@@ -2170,7 +2170,7 @@ function AiChatbot({ symbol, setSymbol, setView }: { symbol: string; setSymbol: 
       const chg = quote.data.change_pct != null ? `${quote.data.change_pct >= 0 ? "+" : ""}${quote.data.change_pct.toFixed(2)}%` : "";
       const sig = signal.data.signal || "HOLD";
       const str = signal.data.strength || 3;
-      const greeting = `Hey! I'm tracking ${symbol} right now, trading at ${price}${chg ? ` — {chg} today` : ""} with a ${sig} signal at ${str}/5 strength. What would you like to know?`;
+      const greeting = `Hey! I'm tracking ${symbol} right now, trading at ${price}${chg ? ` (${chg} today)` : ""} with a ${sig} signal at ${str}/5 strength. What would you like to know?`;
       setMessages([{ role: "assistant", text: greeting }]);
       setInitialized(true);
     } else if (!initialized) {
