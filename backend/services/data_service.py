@@ -134,68 +134,77 @@ def _history_dataframe(symbol: str, period: str) -> pd.DataFrame:
 
 def _history_dataframe_yahoo_chart(symbol: str, period: str) -> pd.DataFrame:
     interval = "5m" if period == "1d" else "1d"
-    response = requests.get(
-        YAHOO_CHART_URL.format(symbol=symbol),
-        params={"range": period, "interval": interval, "includePrePost": "false", "events": "div,splits"},
-        headers=YAHOO_HEADERS,
-        timeout=20,
-    )
-    if response.status_code == 404:
-        raise ValueError(f"No historical data returned for {symbol}")
-    response.raise_for_status()
-    payload = response.json()
-    chart_error = payload.get("chart", {}).get("error")
-    if chart_error:
-        raise ValueError(chart_error.get("description") or f"No historical data returned for {symbol}")
-    result = (payload.get("chart", {}).get("result") or [None])[0]
-    if not result:
-        raise ValueError(f"No historical data returned for {symbol}")
-
-    timestamps = result.get("timestamp") or []
-    quote = ((result.get("indicators") or {}).get("quote") or [{}])[0]
-    adj_close = ((result.get("indicators") or {}).get("adjclose") or [{}])[0].get("adjclose")
-    if not timestamps or not quote:
-        raise ValueError(f"No historical data returned for {symbol}")
-
-    rows = []
-    for idx, timestamp in enumerate(timestamps):
-        close_value = (quote.get("close") or [None] * len(timestamps))[idx]
-        if close_value is None:
-            continue
-        rows.append(
-            {
-                "Date": datetime.fromtimestamp(timestamp, tz=timezone.utc),
-                "Open": (quote.get("open") or [None] * len(timestamps))[idx],
-                "High": (quote.get("high") or [None] * len(timestamps))[idx],
-                "Low": (quote.get("low") or [None] * len(timestamps))[idx],
-                "Close": close_value,
-                "Adj Close": adj_close[idx] if adj_close and idx < len(adj_close) else close_value,
-                "Volume": (quote.get("volume") or [None] * len(timestamps))[idx],
-            }
+    try:
+        response = requests.get(
+            YAHOO_CHART_URL.format(symbol=symbol),
+            params={"range": period, "interval": interval, "includePrePost": "false", "events": "div,splits"},
+            headers=YAHOO_HEADERS,
+            timeout=15,
         )
-    if not rows:
-        raise ValueError(f"No historical data returned for {symbol}")
-    return pd.DataFrame(rows)
+        if response.status_code == 404:
+            raise ValueError(f"No historical data returned for {symbol}")
+        response.raise_for_status()
+        payload = response.json()
+        chart_error = payload.get("chart", {}).get("error")
+        if chart_error:
+            raise ValueError(chart_error.get("description") or f"No historical data returned for {symbol}")
+        result = (payload.get("chart", {}).get("result") or [None])[0]
+        if not result:
+            raise ValueError(f"No historical data returned for {symbol}")
+
+        timestamps = result.get("timestamp") or []
+        quote = ((result.get("indicators") or {}).get("quote") or [{}])[0]
+        adj_close = ((result.get("indicators") or {}).get("adjclose") or [{}])[0].get("adjclose")
+        if not timestamps or not quote:
+            raise ValueError(f"No historical data returned for {symbol}")
+
+        rows = []
+        for idx, timestamp in enumerate(timestamps):
+            close_value = (quote.get("close") or [None] * len(timestamps))[idx]
+            if close_value is None:
+                continue
+            rows.append(
+                {
+                    "Date": datetime.fromtimestamp(timestamp, tz=timezone.utc),
+                    "Open": (quote.get("open") or [None] * len(timestamps))[idx],
+                    "High": (quote.get("high") or [None] * len(timestamps))[idx],
+                    "Low": (quote.get("low") or [None] * len(timestamps))[idx],
+                    "Close": close_value,
+                    "Adj Close": adj_close[idx] if adj_close and idx < len(adj_close) else close_value,
+                    "Volume": (quote.get("volume") or [None] * len(timestamps))[idx],
+                }
+            )
+        if not rows:
+            raise ValueError(f"No historical data returned for {symbol}")
+        return pd.DataFrame(rows)
+    except requests.exceptions.RequestException as e:
+        print(f"[History Chart] Network error for {symbol}: {e}")
+        raise ValueError(f"Network error fetching history for {symbol}: {e}")
 
 
 def _chart_meta(symbol: str) -> dict[str, Any]:
-    response = requests.get(
-        YAHOO_CHART_URL.format(symbol=symbol),
-        params={"range": "1d", "interval": "1d"},
-        headers=YAHOO_HEADERS,
-        timeout=20,
-    )
-    if response.status_code == 404:
-        raise ValueError(f"No quote metadata returned for {symbol}")
-    response.raise_for_status()
-    payload = response.json()
-    chart_error = payload.get("chart", {}).get("error")
-    if chart_error:
-        raise ValueError(chart_error.get("description") or f"No quote metadata returned for {symbol}")
-    result = (payload.get("chart", {}).get("result") or [None])[0]
-    if not result:
-        raise ValueError(f"No quote metadata returned for {symbol}")
-    return result.get("meta") or {}
+    try:
+        response = requests.get(
+            YAHOO_CHART_URL.format(symbol=symbol),
+            params={"range": "1d", "interval": "1d"},
+            headers=YAHOO_HEADERS,
+            timeout=10,
+        )
+        if response.status_code == 404:
+            raise ValueError(f"No quote metadata returned for {symbol}")
+        response.raise_for_status()
+        payload = response.json()
+        chart_error = payload.get("chart", {}).get("error")
+        if chart_error:
+            raise ValueError(chart_error.get("description") or f"No quote metadata returned for {symbol}")
+        result = (payload.get("chart", {}).get("result") or [None])[0]
+        if not result:
+            raise ValueError(f"No quote metadata returned for {symbol}")
+        return result.get("meta") or {}
+    except requests.exceptions.RequestException as e:
+        # Network error - return empty meta to trigger fallback
+        print(f"[Chart Meta] Network error for {symbol}: {e}")
+        raise ValueError(f"Network error fetching chart meta for {symbol}: {e}")
 
 
 def _fast_info_get(fast_info: Any, key: str) -> Any:
@@ -328,7 +337,8 @@ def get_quote(symbol: str, db: Session) -> Quote:
 
         try:
             meta = _chart_meta(candidate)
-        except Exception:
+        except Exception as e:
+            print(f"[Quote] Chart meta failed for {candidate}: {e}")
             try:
                 fast_info = ticker.fast_info
             except Exception:
@@ -339,8 +349,10 @@ def get_quote(symbol: str, db: Session) -> Quote:
         open_price = _clean_float(meta.get("regularMarketOpen") or _fast_info_get(fast_info, "open"))
         day_high = _clean_float(meta.get("regularMarketDayHigh") or _fast_info_get(fast_info, "day_high"))
         day_low = _clean_float(meta.get("regularMarketDayLow") or _fast_info_get(fast_info, "day_low"))
-        try:
-            if price is None:
+        
+        # If price is None, try history fallback
+        if price is None:
+            try:
                 hist = _history_dataframe(candidate, "5d")
                 latest = hist.iloc[-1]
                 previous = hist.iloc[-2] if len(hist) > 1 else latest
@@ -349,17 +361,20 @@ def get_quote(symbol: str, db: Session) -> Quote:
                 open_price = _clean_float(latest.get("Open"))
                 day_high = _clean_float(latest.get("High"))
                 day_low = _clean_float(latest.get("Low"))
-        except Exception as exc:
-            last_error = exc
-            continue
+            except Exception as exc:
+                last_error = exc
+                print(f"[Quote] History fallback failed for {candidate}: {exc}")
+                continue
+        
         if price is None:
             continue
+            
         change = price - previous_close if price is not None and previous_close else None
         change_pct = (change / previous_close) * 100 if change is not None and previous_close else None
 
         response = Quote(
             symbol=requested_symbol,
-            name=info.get("shortName") or info.get("longName") or meta.get("shortName") or meta.get("longName") or STOCK_UNIVERSE.get(requested_symbol),
+            name=STOCK_UNIVERSE.get(requested_symbol) or requested_symbol,
             price=price,
             previous_close=previous_close,
             open=open_price,
@@ -367,10 +382,10 @@ def get_quote(symbol: str, db: Session) -> Quote:
             day_low=day_low,
             change=_clean_float(change),
             change_pct=_clean_float(change_pct),
-            volume=_clean_int(_fast_info_get(fast_info, "last_volume") or info.get("volume") or info.get("regularMarketVolume") or meta.get("regularMarketVolume")),
-            market_cap=_clean_float(_fast_info_get(fast_info, "market_cap") or info.get("marketCap")),
-            currency=_fast_info_get(fast_info, "currency") or info.get("currency") or meta.get("currency"),
-            exchange=info.get("exchange") or meta.get("exchangeName") or infer_exchange(requested_symbol),
+            volume=_clean_int(meta.get("regularMarketVolume")),
+            market_cap=None,
+            currency=meta.get("currency") or "USD",
+            exchange=infer_exchange(requested_symbol),
             timestamp=_now(),
             cached=False,
         )

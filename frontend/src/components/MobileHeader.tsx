@@ -67,7 +67,8 @@ export default function MobileHeader({
   }, []);
 
   const initials = userEmail ? userEmail.split("@")[0].substring(0, 2).toUpperCase() : "US";
-  const title = viewTitles[currentView] || "StockVision";
+  const appTitle = import.meta.env.VITE_APP_TITLE || "StockVision";
+  const title = viewTitles[currentView] || appTitle;
 
   return (
     <header className="mobile-header">

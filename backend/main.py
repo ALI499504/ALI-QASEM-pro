@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy import select
 from models.database import SessionLocal, init_db, Alert, utc_now
-from routers import ai, alerts, auth, compare, market, saved_backtests, stock, watchlist, backtest, forecast
+from routers import ai, alerts, auth, admin, compare, market, saved_backtests, stock, watchlist, backtest, forecast
 
 from services.data_service import get_quote, get_history_df
 
@@ -155,6 +155,7 @@ def health() -> dict[str, Any]:
     }
 
 app.include_router(auth.router)
+app.include_router(admin.router)
 app.include_router(stock.router)
 app.include_router(market.router)
 app.include_router(watchlist.router)

@@ -426,7 +426,7 @@ function AppShell() {
           </svg>
         </div>
         <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px" }}>
-          StockVision <span style={{ color: "#3b82f6" }}>PRO DESK</span>
+          {import.meta.env.VITE_APP_TITLE || "StockVision"} <span style={{ color: "#3b82f6" }}>PRO DESK</span>
         </div>
         <div style={{ fontSize: 12, color: isDark ? "#94a3b8" : "#64748b", marginTop: 8 }}>
           Verifying encrypted session...
@@ -482,7 +482,7 @@ function AppShell() {
               </svg>
             </div>
             <div className="desk-brand-titles">
-              <span className="desk-brand-name">StockVision</span>
+              <span className="desk-brand-name">{import.meta.env.VITE_APP_TITLE || "StockVision"}</span>
               <span className="desk-brand-sub">PRO DESK</span>
             </div>
           </div>

@@ -76,7 +76,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white m-0">
-                StockVision Account
+                {import.meta.env.VITE_APP_TITLE || "StockVision"} Account
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 m-0">
                 {mode === "login" ? "Access saved strategies & alerts" : "Create personal trading workspace"}
@@ -226,7 +226,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = "login" }:
 
         <div className="px-6 py-3 bg-slate-50/50 dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800/80 text-center">
           <span className="text-[11px] text-slate-500 dark:text-slate-400">
-            {mode === "login" ? "New to StockVision Pro? " : "Already have an account? "}
+            {mode === "login" ? `New to ${import.meta.env.VITE_APP_TITLE || "StockVision"} Pro? ` : `Already have an account? `}
             <button
               type="button"
               onClick={() => {

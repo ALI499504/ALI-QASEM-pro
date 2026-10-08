@@ -139,7 +139,7 @@ export function LandingPage({ onLoginSuccess }: LandingPageProps) {
               </svg>
             </div>
             <div className="inst-brand-title-wrap">
-              <span className="inst-brand-title">StockVision</span>
+              <span className="inst-brand-title">{import.meta.env.VITE_APP_TITLE || "StockVision"}</span>
               <span className="inst-brand-alpha">Pro</span>
             </div>
             <div className="inst-pill-gateway">
