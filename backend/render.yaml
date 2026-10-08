@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: stockvision-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    envVars:
+      - key: JWT_SECRET_KEY
+        value: 9a647d6c6e1db05a909477e68cf6dc8a2455e6c7fa823023e669e2501ff80e14
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: DATABASE_URL
+        value: sqlite:///./stockvision.db
+      - key: CORS_ORIGIN
+        value: https://ali-qasem-pro.vercel.app
+      - key: ENV
+        value: production
+      - key: PRICE_REFRESH_SECONDS
+        value: "10"
+      - key: PYTHON_VERSION
+        value: "3.11"
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    numInstances: 1
