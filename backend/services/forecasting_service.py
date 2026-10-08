@@ -182,8 +182,12 @@ def calculate_metrics(y_true, y_pred) -> dict:
     mae = mean_absolute_error(y_true, y_pred)
     rmse = np.sqrt(mean_squared_error(y_true, y_pred))
     
-    y_true_safe = np.where(y_true == 0, 1e-8, y_true)
-    mape = np.mean(np.abs((y_true - y_pred) / y_true_safe)) * 100
+    # Handle division by zero and invalid values properly
+    with np.errstate(divide='ignore', invalid='ignore'):
+        relative_errors = np.abs((y_true - y_pred) / y_true)
+        relative_errors = np.where(np.isinf(relative_errors) | np.isnan(relative_errors), 0, relative_errors)
+        mape = np.mean(relative_errors) * 100
+    
     r2 = r2_score(y_true, y_pred)
     
     return {

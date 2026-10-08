@@ -85,44 +85,47 @@ async def check_alerts_loop() -> None:
                         from services.technical_service import calculate_all
                         indicators = calculate_all(df)
                         summary = indicators["summary"]
-                        
+
                         for alert in symbol_alerts:
-                            triggered = False
-                            trigger_reason = ""
-                            cond = alert.condition_type or alert.alert_type
-                            val = alert.threshold_value if alert.threshold_value is not None else alert.value
-                            
-                            if cond in ("price_above", "above"):
-                                if current_price > val:
-                                    triggered = True
-                                    trigger_reason = f"Price ${current_price:,.2f} crossed above threshold ${val:,.2f}"
-                            elif cond in ("price_below", "below"):
-                                if current_price < val:
-                                    triggered = True
-                                    trigger_reason = f"Price ${current_price:,.2f} crossed below threshold ${val:,.2f}"
-                            elif cond == "sma_crossover":
-                                if summary.sma_20 is not None and summary.sma_50 is not None:
-                                    if summary.sma_20 > summary.sma_50:
+                            try:
+                                triggered = False
+                                trigger_reason = ""
+                                cond = alert.condition_type or alert.alert_type
+                                val = alert.threshold_value if alert.threshold_value is not None else alert.value
+                                
+                                if cond in ("price_above", "above"):
+                                    if current_price > val:
                                         triggered = True
-                                        trigger_reason = f"SMA 20 (${summary.sma_20:.2f}) crossed above SMA 50 (${summary.sma_50:.2f})"
-                            elif cond in ("rsi_below", "rsi_oversold"):
-                                threshold = val if val and val > 0 else 30.0
-                                if summary.rsi is not None and summary.rsi < threshold:
-                                    triggered = True
-                                    trigger_reason = f"RSI is {summary.rsi:.2f} (Below {threshold:.0f})"
-                            elif cond in ("rsi_above", "rsi_overbought"):
-                                threshold = val if val and val > 0 else 70.0
-                                if summary.rsi is not None and summary.rsi > threshold:
-                                    triggered = True
-                                    trigger_reason = f"RSI is {summary.rsi:.2f} (Above {threshold:.0f})"
-                                    
-                            if triggered:
-                                alert.is_triggered = True
-                                alert.triggered_at = utc_now()
-                                db.commit()
-                                print(f"[Alert Triggered] Alert ID: {alert.id} | Symbol: {symbol} | Reason: {trigger_reason}")
+                                        trigger_reason = f"Price ${current_price:,.2f} crossed above threshold ${val:,.2f}"
+                                elif cond in ("price_below", "below"):
+                                    if current_price < val:
+                                        triggered = True
+                                        trigger_reason = f"Price ${current_price:,.2f} crossed below threshold ${val:,.2f}"
+                                elif cond == "sma_crossover":
+                                    if summary.sma_20 is not None and summary.sma_50 is not None:
+                                        if summary.sma_20 > summary.sma_50:
+                                            triggered = True
+                                            trigger_reason = f"SMA 20 (${summary.sma_20:.2f}) crossed above SMA 50 (${summary.sma_50:.2f})"
+                                elif cond in ("rsi_below", "rsi_oversold"):
+                                    threshold = val if val and val > 0 else 30.0
+                                    if summary.rsi is not None and summary.rsi < threshold:
+                                        triggered = True
+                                        trigger_reason = f"RSI is {summary.rsi:.2f} (Below {threshold:.0f})"
+                                elif cond in ("rsi_above", "rsi_overbought"):
+                                    threshold = val if val and val > 0 else 70.0
+                                    if summary.rsi is not None and summary.rsi > threshold:
+                                        triggered = True
+                                        trigger_reason = f"RSI is {summary.rsi:.2f} (Above {threshold:.0f})"
+                                
+                                if triggered:
+                                    alert.is_triggered = True
+                                    alert.triggered_at = utc_now()
+                                    db.commit()
+                                    print(f"[Alert Triggered] Alert ID: {alert.id} | Symbol: {symbol} | Reason: {trigger_reason}")
+                            except Exception as e:
+                                print(f"[Alerts Loop Error] Failed to process alert {alert.id} for symbol {symbol}: {e}")
                     except Exception as e:
-                        print(f"[Alerts Loop Error] Failed to process alerts for {symbol}: {e}")
+                        print(f"[Alerts Loop Error] Failed to process symbol {symbol}: {e}")
         except Exception as e:
             print(f"[Alerts Loop Error] Loop encountered an error: {e}")
 
