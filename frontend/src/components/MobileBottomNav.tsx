@@ -14,7 +14,7 @@ export type View =
   | "watchlist"
   | "calendar"
   | "accuracy"
-  | "backtest";
+  | "backtest" | "admin";
 
 interface MobileBottomNavProps {
   currentView: View;

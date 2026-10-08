@@ -62,6 +62,7 @@ import ForecastStudio from "./components/ForecastStudio";
 import ForecastOpportunities from "./components/ForecastOpportunities";
 import ForecastAccuracy from "./components/ForecastAccuracy";
 import BacktestingStudio from "./components/BacktestingStudio";
+import AdminPanel from "./components/AdminPanel";
 import { AuthModal } from "./components/AuthModal";
 import { LandingPage } from "./components/LandingPage";
 import MobileHeader from "./components/MobileHeader";
@@ -76,7 +77,7 @@ import "./styles/globals.css";
   document.documentElement.setAttribute("data-theme", saved);
 })();
 
-type View = "dashboard" | "stock" | "compare" | "screener" | "watchlist" | "alerts" | "calendar" | "forecast" | "opportunities" | "accuracy" | "sentiment" | "settings" | "backtest";
+type View = "dashboard" | "stock" | "compare" | "screener" | "watchlist" | "alerts" | "calendar" | "forecast" | "opportunities" | "accuracy" | "sentiment" | "settings" | "backtest" | "admin";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30000, retry: 1 } },
@@ -513,6 +514,9 @@ function AppShell() {
           badge={triggeredCount > 0 ? `⚡ ${triggeredCount}` : activeAlertsCount > 0 ? String(activeAlertsCount) : undefined}
         />
         <NavButton active={view === "settings"} onClick={() => setView("settings")} icon={<SettingsIcon />} label="Settings" />
+        {currentUser?.role === "admin" && (
+          <NavButton active={view === "admin"} onClick={() => setView("admin")} icon={<ShieldAlert />} label="Admin" />
+        )}
 
         <div style={{ flexGrow: 1 }} />
         <DeskUserPill user={currentUser} onLogout={handleLogout} onOpenAuth={() => setAuthModalOpen(true)} setView={setView} />
@@ -543,6 +547,7 @@ function AppShell() {
         {view === "sentiment" && <NewsSentiment symbol={symbol} setSymbol={setSymbol} setView={setView} />}
         {view === "alerts" && <Alerts symbol={symbol} currentUser={currentUser} onOpenAuth={() => setAuthModalOpen(true)} />}
         {view === "settings" && <SettingsView isDark={isDark} onThemeToggle={toggleTheme} />}
+        {view === "admin" && currentUser?.role === "admin" && <AdminPanel />}
 
         {/* Backwards compatibility views */}
         {view === "compare" && <Compare />}
