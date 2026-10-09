@@ -19,3 +19,23 @@ passlib==1.7.4
 bcrypt==4.0.1
 pyjwt==2.10.1
 slowapi==0.1.10
+# AI/LLM Integration
+openai==1.54.0
+anthropic==0.32.0
+# Portfolio & Risk Management
+cvxpy==1.6.0
+# Strategy & Backtesting
+backtesting==0.5.1
+# Additional ML/AI
+transformers==4.44.0
+sentence-transformers==3.0.0
+# Additional data sources
+alpha-vantage==2.3.1
+# Social sentiment
+praw==7.7.1
+# Async utilities
+aioredis==2.0.1
+# WebSockets
+websockets==12.0
+# Strategy optimization
+optuna==3.6.0

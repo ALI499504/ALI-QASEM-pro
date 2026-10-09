@@ -175,12 +175,13 @@ def market_news_sentiment(db: Session = Depends(get_db)) -> dict:
 @router.get("/analyze/{symbol}")
 def analyze_symbol(
     symbol: str,
+    period: str = Query("1y", description="Time period for analysis"),
     db: Session = Depends(get_db),
 ) -> MarketAnalysis:
     """Complete market analysis including ICT & Classical."""
     try:
-        # Get recent history data
-        df = get_history_df(symbol, "3m", db) if symbol else None
+        # Get recent history data - use 1y default for sufficient data points
+        df = get_history_df(symbol, period, db) if symbol else None
         if df is None or df.empty:
             # Return default analysis if no data
             return MarketAnalysis(symbol=symbol)
@@ -188,6 +189,10 @@ def analyze_symbol(
         analysis = analyze_market(df, symbol)
         return analysis
     except Exception as e:
+        # Log error for debugging
+        import traceback
+        print(f"[Market Analysis Error] {symbol}: {str(e)}")
+        print(traceback.format_exc())
         # Return default analysis on error
         from models.schemas import MarketAnalysis, TradeSignal, MarketZone
         return MarketAnalysis(symbol=symbol)
@@ -196,33 +201,43 @@ def analyze_symbol(
 @router.get("/zones/{symbol}")
 def get_trading_zones(
     symbol: str,
+    period: str = Query("1y", description="Time period for zone detection"),
+    lookback: int = Query(15, ge=5, le=50, description="Lookback period for zone detection"),
+    min_touches: int = Query(2, ge=1, le=10, description="Minimum touches for zone validation"),
     db: Session = Depends(get_db),
 ) -> list[MarketZone]:
     """Detect Support/Resistance zones for trading."""
     try:
-        df = get_history_df(symbol, "1y", db) if symbol else None
+        df = get_history_df(symbol, period, db) if symbol else None
         if df is None or df.empty:
             return []
-        zones = detect_support_resistance_zones(df, lookback=15, min_touches=2)
+        zones = detect_support_resistance_zones(df, lookback=lookback, min_touches=min_touches)
         return zones
     except Exception as e:
+        import traceback
+        print(f"[Zones Error] {symbol}: {str(e)}")
+        print(traceback.format_exc())
         return []
 
 
 @router.post("/signal/{symbol}")
 def get_trade_signal(
     symbol: str,
+    period: str = Query("1y", description="Time period for signal generation"),
     db: Session = Depends(get_db),
 ) -> TradeSignal:
     """Generate trade signal with entry, SL, TP based on analysis."""
     try:
-        df = get_history_df(symbol, "3m", db) if symbol else None
+        df = get_history_df(symbol, period, db) if symbol else None
         if df is None or df.empty:
             return TradeSignal(action="hold")
         
         analysis = analyze_market(df, symbol)
         return analysis.signal
     except Exception as e:
+        import traceback
+        print(f"[Trade Signal Error] {symbol}: {str(e)}")
+        print(traceback.format_exc())
         from models.schemas import TradeSignal
         return TradeSignal(action="hold")
 
