@@ -388,6 +388,49 @@ export async function getCompareSummary(symbols: string[]) {
   return (await api.get("/compare/summary", { params: { symbols: symbols.join(",") } })).data;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Market Analysis (Gold/Commodity)
+// ─────────────────────────────────────────────────────────────────────────────
+export interface MarketZone {
+  name: string;
+  zone_type: "support" | "resistance" | "demand" | "supply";
+  high: number;
+  low: number;
+  strength: number;
+  test_count: number;
+}
+
+export interface TradeSignal {
+  action: "buy" | "sell" | "hold";
+  entry: number | null;
+  stop_loss: number | null;
+  take_profit: number[];
+  risk_reward_ratio: number;
+  confidence: number;
+}
+
+export interface MarketAnalysis {
+  symbol: string;
+  trend: "bullish" | "bearish" | "neutral";
+  zones: MarketZone[];
+  signal: TradeSignal;
+  classical: any;
+  ict: any;
+  timestamp: string;
+}
+
+export async function analyzeMarket(symbol: string): Promise<MarketAnalysis> {
+  return (await api.get(`/market/analyze/${encodeURIComponent(symbol)}`)).data;
+}
+
+export async function getMarketZones(symbol: string): Promise<MarketZone[]> {
+  return (await api.get(`/market/zones/${encodeURIComponent(symbol)}`)).data;
+}
+
+export async function getTradeSignal(symbol: string): Promise<TradeSignal> {
+  return (await api.post(`/market/signal/${encodeURIComponent(symbol)}`)).data;
+}
+
 export async function askAssistant(message: string, symbols: string[]) {
   return (await api.post("/ai/chat", { message, symbols })).data as {
     answer: string;

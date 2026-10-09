@@ -20,9 +20,23 @@ INFO_TTL_DAYS = 7
 VALID_PERIODS = {"1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max"}
 YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
 YAHOO_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
+# ─── Gold & Commodity Symbol Aliases ────────────────────────────────────
+# Maps user-friendly symbols to Yahoo Finance tickers that actually work
+GOLD_SYMBOL_ALIASES: dict[str, list[str]] = {
+    "XAUUSD": ["GC=F", "XAUUSD=X"],  # Gold spot -> Gold futures primary
+    "XAGUSD": ["SI=F", "XAGUSD=X"],  # Silver spot
+    "XPTUSD": ["PL=F"],  # Platinum
+    "XPDUSD": ["PA=F"],  # Palladium
+    "GOLD": ["GC=F", "GLD"],  # Gold generic
+    "SILVER": ["SI=F", "SLV"],  # Silver generic
+}
+
+# ─── Symbol Aliases ──────────────────────────────────────────────────────
 SYMBOL_ALIASES: dict[str, list[str]] = {
     # Tata Motors old ticker now often resolves to split entities on providers.
     "TATAMOTORS.NS": ["TMPV.NS", "TMCV.NS", "TATAMTRDVR.NS", "TTM"],
+    # Gold/Commodity aliases for better resolution
+    **GOLD_SYMBOL_ALIASES,
 }
 
 
@@ -95,6 +109,42 @@ def _symbol_candidates(symbol: str) -> list[str]:
     return ordered
 
 
+# ─── Gold-Specific Helpers ───────────────────────────────────────────────
+GOLD_PRIMARY_SYMBOLS = {
+    "XAUUSD", "XAGUSD", "XPTUSD", "XPDUSD",
+    "GC=F", "SI=F", "PL=F", "PA=F",
+    "GLD", "IAU", "SGOL", "GLDM", "BAR",
+    "SLV", "SIVR", "PPLT", "PALL",
+}
+
+
+def is_gold_symbol(symbol: str) -> bool:
+    """Check if symbol is a gold/precious metal related symbol."""
+    sym = normalize_symbol(symbol)
+    return sym in GOLD_PRIMARY_SYMBOLS or sym.startswith("GC=") or sym.startswith("SI=")
+
+
+def get_gold_display_name(symbol: str) -> str:
+    """Get user-friendly display name for gold symbols."""
+    names = {
+        "XAUUSD": "Gold Spot (XAU/USD)",
+        "XAGUSD": "Silver Spot (XAG/USD)",
+        "XPTUSD": "Platinum Spot",
+        "XPDUSD": "Palladium Spot",
+        "GC=F": "Gold Futures (COMEX)",
+        "SI=F": "Silver Futures (COMEX)",
+        "PL=F": "Platinum Futures",
+        "PA=F": "Palladium Futures",
+        "GLD": "SPDR Gold Shares ETF",
+        "IAU": "iShares Gold Trust ETF",
+        "SGOL": "abrdn Physical Gold ETF",
+        "GLDM": "SPDR Gold MiniShares ETF",
+        "BAR": "GraniteShares Gold Trust ETF",
+        "SLV": "iShares Silver Trust ETF",
+    }
+    return names.get(normalize_symbol(symbol), symbol)
+
+
 def search_stocks(query: str, limit: int = 12) -> list[SearchResult]:
     needle = query.strip().lower()
     if not needle:
@@ -117,6 +167,28 @@ def search_stocks(query: str, limit: int = 12) -> list[SearchResult]:
 
 
 def _history_dataframe(symbol: str, period: str) -> pd.DataFrame:
+    """Get historical data, supporting both regular symbols and gold/commodity symbols."""
+    try:
+        # Try primary symbol first
+        result = _history_dataframe_yahoo_chart(symbol, period)
+        if not result.empty:
+            return result
+    except Exception as e:
+        print(f"[History] Primary failed for {symbol}: {e}")
+
+    # Try aliases for gold/commodity symbols
+    sym = normalize_symbol(symbol)
+    if sym in GOLD_SYMBOL_ALIASES:
+        for alias in GOLD_SYMBOL_ALIASES[sym]:
+            try:
+                result = _history_dataframe_yahoo_chart(alias, period)
+                if not result.empty:
+                    return result
+            except Exception as e:
+                print(f"[History] Alias {alias} failed: {e}")
+                continue
+
+    # Fallback to original method
     try:
         return _history_dataframe_yahoo_chart(symbol, period)
     except Exception:

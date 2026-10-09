@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -326,4 +326,65 @@ class MarketStatusResponse(BaseModel):
     eastern_time: str = ""
     detail: str = ""
     server_time_utc: str = ""
+
+
+# ─── Gold Trading & Market Analysis Schemas ──────────────────────────────────
+
+class MarketZone(BaseModel):
+    name: str
+    zone_type: Literal["support", "resistance", "demand", "supply"]
+    high: float
+    low: float
+    strength: float = 0.0
+    test_count: int = 0
+
+
+class TradeSignal(BaseModel):
+    action: Literal["buy", "sell", "hold"]
+    entry: float | None = None
+    stop_loss: float | None = None
+    take_profit: list[float] = []
+    risk_reward_ratio: float = 0.0
+    confidence: float = 0.0
+
+
+class ClassicalAnalysis(BaseModel):
+    rsi: float | None = None
+    sma_20: float | None = None
+    sma_50: float | None = None
+    sma_200: float | None = None
+    ema_12: float | None = None
+    ema_26: float | None = None
+    macd: float | None = None
+    macd_signal: float | None = None
+    macd_histogram: float | None = None
+    bb_upper: float | None = None
+    bb_middle: float | None = None
+    bb_lower: float | None = None
+    bb_width: float | None = None
+    stochastic_k: float | None = None
+    stochastic_d: float | None = None
+    atr: float | None = None
+    trend: Literal["bullish", "bearish", "neutral"] = "neutral"
+    recent_swing_high: float | None = None
+    recent_swing_low: float | None = None
+
+
+class ICTAnalysis(BaseModel):
+    fair_value_gaps: list[dict[str, Any]] = []
+    order_blocks: list[dict[str, Any]] = []
+    session_high: float | None = None
+    session_low: float | None = None
+    silver_bullet_time: str | None = None  # 10AM, 1PM, 3PM ET
+    kill_zone: Literal["asia", "london", "new_york", "none"] = "none"
+
+
+class MarketAnalysis(BaseModel):
+    symbol: str
+    trend: Literal["bullish", "bearish", "neutral"] = "neutral"
+    zones: list[MarketZone] = []
+    signal: TradeSignal = TradeSignal(action="hold")
+    classical: ClassicalAnalysis = ClassicalAnalysis()
+    ict: ICTAnalysis = ICTAnalysis()
+    timestamp: datetime = datetime.now(timezone.utc)
 

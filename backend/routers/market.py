@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from models.database import get_db
-from models.schemas import MarketStatusResponse
+from models.schemas import MarketStatusResponse, MarketAnalysis, MarketZone, TradeSignal
 from services.analysis_service import get_market_news_sentiment, market_overview, screener
+from services.data_service import get_history_df
+from services.market_analysis import analyze_market, detect_support_resistance_zones, _generate_trade_signal
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 
@@ -167,4 +169,60 @@ def run_screener(q: str = Query("", description="Optional symbol/name query"), d
 @router.get("/news-sentiment")
 def market_news_sentiment(db: Session = Depends(get_db)) -> dict:
     return get_market_news_sentiment(db)
+
+
+# ─── Gold & Market Analysis Routes ──────────────────────────────────────
+@router.get("/analyze/{symbol}")
+def analyze_symbol(
+    symbol: str,
+    db: Session = Depends(get_db),
+) -> MarketAnalysis:
+    """Complete market analysis including ICT & Classical."""
+    try:
+        # Get recent history data
+        df = get_history_df(symbol, "3m", db) if symbol else None
+        if df is None or df.empty:
+            # Return default analysis if no data
+            return MarketAnalysis(symbol=symbol)
+        
+        analysis = analyze_market(df, symbol)
+        return analysis
+    except Exception as e:
+        # Return default analysis on error
+        from models.schemas import MarketAnalysis, TradeSignal, MarketZone
+        return MarketAnalysis(symbol=symbol)
+
+
+@router.get("/zones/{symbol}")
+def get_trading_zones(
+    symbol: str,
+    db: Session = Depends(get_db),
+) -> list[MarketZone]:
+    """Detect Support/Resistance zones for trading."""
+    try:
+        df = get_history_df(symbol, "1y", db) if symbol else None
+        if df is None or df.empty:
+            return []
+        zones = detect_support_resistance_zones(df, lookback=15, min_touches=2)
+        return zones
+    except Exception as e:
+        return []
+
+
+@router.post("/signal/{symbol}")
+def get_trade_signal(
+    symbol: str,
+    db: Session = Depends(get_db),
+) -> TradeSignal:
+    """Generate trade signal with entry, SL, TP based on analysis."""
+    try:
+        df = get_history_df(symbol, "3m", db) if symbol else None
+        if df is None or df.empty:
+            return TradeSignal(action="hold")
+        
+        analysis = analyze_market(df, symbol)
+        return analysis.signal
+    except Exception as e:
+        from models.schemas import TradeSignal
+        return TradeSignal(action="hold")
 
