@@ -18,6 +18,10 @@ services:
         value: "7"
       - key: DATABASE_URL
         value: sqlite:///./stockvision.db
+      - key: MONGODB_URI
+        # MongoDB URI for production (e.g., MongoDB Atlas)
+        # Set this in Render's environment variables for production use
+        value: ""
       - key: CORS_ORIGIN
         value: https://ali-qasem-pro.vercel.app
       - key: ENV

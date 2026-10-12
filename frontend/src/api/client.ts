@@ -14,6 +14,27 @@ export function getAuthToken(): string | null {
   return inMemoryToken;
 }
 
+// Connection status tracking
+let connectionStatus: "connected" | "disconnected" | "reconnecting" = "connected";
+const connectionListeners: Array<(status: typeof connectionStatus) => void> = [];
+
+export function onConnectionChange(callback: (status: typeof connectionStatus) => void) {
+  connectionListeners.push(callback);
+  return () => {
+    const idx = connectionListeners.indexOf(callback);
+    if (idx > -1) connectionListeners.splice(idx, 1);
+  };
+}
+
+function notifyConnectionChange(status: typeof connectionStatus) {
+  connectionStatus = status;
+  connectionListeners.forEach((cb) => cb(status));
+}
+
+export function getConnectionStatus(): typeof connectionStatus {
+  return connectionStatus;
+}
+
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api",
   timeout: 30000,
@@ -31,7 +52,7 @@ api.interceptors.request.use((config) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Axios Response Interceptor: Seamless Auto-Refresh on 401
+// Axios Response Interceptor: Auto-retry on network errors, handle 401
 // ─────────────────────────────────────────────────────────────────────────────
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -50,10 +71,37 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+
+async function retryRequest(originalRequest: any, attempt = 1): Promise<any> {
+  try {
+    return await api(originalRequest);
+  } catch (error: any) {
+    const isNetworkError = !error.response;
+    const isServerError = error.response?.status >= 500;
+    const isRateLimited = error.response?.status === 429;
+    
+    if ((isNetworkError || isServerError || isRateLimited) && attempt < MAX_RETRIES) {
+      notifyConnectionChange("reconnecting");
+      await new Promise((r) => setTimeout(r, RETRY_DELAY * attempt));
+      return retryRequest(originalRequest, attempt + 1);
+    }
+    throw error;
+  }
+}
+
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (connectionStatus !== "connected") {
+      notifyConnectionChange("connected");
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+    
+    // Handle 401 - Token refresh
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
@@ -81,16 +129,36 @@ api.interceptors.response.use(
         setAuthToken(newToken);
         processQueue(null, newToken);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        notifyConnectionChange("connected");
         return api(originalRequest);
       } catch (refreshErr) {
         processQueue(refreshErr, null);
         setAuthToken(null);
         window.dispatchEvent(new CustomEvent("svp_auth_logout"));
+        notifyConnectionChange("disconnected");
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;
       }
     }
+    
+    // Handle network errors with retry
+    if (!error.response || error.response?.status >= 500 || error.response?.status === 429) {
+      if (!originalRequest._retryAttempt) {
+        originalRequest._retryAttempt = 1;
+      }
+      if (originalRequest._retryAttempt < MAX_RETRIES) {
+        originalRequest._retryAttempt++;
+        notifyConnectionChange("reconnecting");
+        await new Promise((r) => setTimeout(r, RETRY_DELAY * originalRequest._retryAttempt));
+        return api(originalRequest);
+      }
+    }
+    
+    if (!error.response) {
+      notifyConnectionChange("disconnected");
+    }
+    
     return Promise.reject(error);
   }
 );

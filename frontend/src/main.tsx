@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { Analytics } from "@vercel/analytics/react";
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Activity, AlertCircle, Bell, Brain, Briefcase, CandlestickChart, Check, CheckCircle, Copy, ExternalLink, Eye, EyeOff, Gauge, History, LineChart as LineChartIcon, ListPlus, MessageCircle, Moon, Sunrise, Plus, Radar, Search, Send, Star, Sun, Table2, Trash2, Wifi, X, Newspaper, Flame, Settings as SettingsIcon, TrendingUp, TrendingDown, Filter, Download, User, ChevronsUpDown, MoreVertical, SlidersHorizontal, Layers, LayoutGrid, CheckCircle2, Sparkles, Bookmark, Zap, Globe, RefreshCw, ArrowUpRight, ArrowDownRight, ShieldAlert, Volume2, VolumeX, ShieldCheck, Crosshair, Target } from "lucide-react";
+import { Activity, AlertCircle, Bell, Brain, Briefcase, CandlestickChart, Check, CheckCircle, Copy, ExternalLink, Eye, EyeOff, Gauge, History, LineChart as LineChartIcon, ListPlus, MessageCircle, Moon, Sunrise, Plus, Radar, Search, Send, Star, Sun, Table2, Trash2, Wifi, X, Newspaper, Flame, Settings as SettingsIcon, TrendingUp, TrendingDown, Filter, Download, User, ChevronsUpDown, MoreVertical, SlidersHorizontal, Layers, LayoutGrid, CheckCircle2, Sparkles, Bookmark, Zap, Globe, RefreshCw, ArrowUpRight, ArrowDownRight, ShieldAlert, Volume2, VolumeX, ShieldCheck, Crosshair, Target, Dot, XCircle } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -57,6 +57,7 @@ import {
   type ThresholdAlert,
 } from "./api/client";
 import { FALLBACK_MARKET_NEWS_SENTIMENT } from "./data/newsSentimentFallback";
+import { getConnectionStatus, onConnectionChange } from "./api/client";
 import { createChart, ColorType } from "lightweight-charts";
 import ForecastStudio from "./components/ForecastStudio";
 import ForecastOpportunities from "./components/ForecastOpportunities";
@@ -70,6 +71,63 @@ import MobileBottomNav from "./components/MobileBottomNav";
 import MobileSearchModal from "./components/MobileSearchModal";
 import { useMarketStatus } from "./utils/marketStatus";
 import "./styles/globals.css";
+
+// Connection status indicator component
+type ConnectionStatus = "connected" | "disconnected" | "reconnecting";
+
+interface StatusInfo {
+  label: string;
+  color: string;
+  bgColor: string;
+  icon: React.ReactElement;
+}
+
+function ConnectionStatusIndicator() {
+  const [status, setStatus] = useState<ConnectionStatus>("connected");
+  
+  useEffect(() => {
+    const unsubscribe = onConnectionChange(setStatus);
+    // Set initial status
+    setStatus(getConnectionStatus());
+    return unsubscribe;
+  }, []);
+
+  const getStatusInfo = (s: ConnectionStatus): StatusInfo => {
+    switch (s) {
+      case "connected":
+        return {
+          label: "متصل",
+          color: "var(--accent-teal)",
+          bgColor: "rgba(16, 185, 129, 0.1)",
+          icon: <Dot size={12} className="animate-pulse" />
+        };
+      case "disconnected":
+        return {
+          label: "غير متصل",
+          color: "var(--accent-rose)",
+          bgColor: "rgba(239, 68, 68, 0.1)",
+          icon: <XCircle size={12} />
+        };
+      case "reconnecting":
+        return {
+          label: "إعادة الاتصال...",
+          color: "var(--accent-amber)",
+          bgColor: "rgba(245, 158, 11, 0.1)",
+          icon: <RefreshCw size={12} className="animate-spin" />
+        };
+    }
+  };
+
+  const { label, color, bgColor, icon } = getStatusInfo(status);
+
+  return (
+    <div className="desk-connection-status flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-medium transition-all"
+         title={`حالة الاتصال: ${label}`}>
+      <div className="w-3 h-3 flex items-center justify-center">{icon}</div>
+      <span>{label}</span>
+    </div>
+  );
+}
 
 // Apply saved theme before first render
 (function initTheme() {
@@ -590,36 +648,96 @@ function useLiveQuotes(symbols: string[]): LiveState {
     let socket: WebSocket | undefined;
     let staleTimer: number | undefined;
     let closed = false;
+    let pollTimer: number | undefined;
+    let wsFailed = false;
 
     const markDelayed = () => setState((current) => ({ ...current, status: "delayed" }));
 
+    // Fallback polling function for when WebSocket fails
+    const startPolling = () => {
+      if (closed) return;
+      const apiBase = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
+      const fetchQuotes = async () => {
+        if (closed) return;
+        try {
+          const res = await fetch(`${apiBase}/market/overview`);
+          if (!res.ok) throw new Error("Failed to fetch");
+          const data = await res.json();
+          if (data.indices) {
+            setState({ status: "delayed", quotes: data.indices, lastUpdate: new Date().toISOString() });
+          }
+        } catch {
+          markDelayed();
+        }
+        if (!closed) {
+          pollTimer = window.setTimeout(fetchQuotes, 15000);
+        }
+      };
+      fetchQuotes();
+    };
+
+    const stopPolling = () => {
+      if (pollTimer) window.clearTimeout(pollTimer);
+    };
+
+    // Try WebSocket first, fallback to polling
     try {
       const wsBase = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api")
         .replace("https://", "wss://")
         .replace("http://", "ws://")
         .replace("/api", "");
       socket = new WebSocket(`${wsBase}/ws/prices`);
+      
       socket.onopen = () => {
         socket?.send(JSON.stringify({ symbols }));
-        staleTimer = window.setTimeout(markDelayed, 16000);
+        staleTimer = window.setTimeout(() => {
+          if (!wsFailed) {
+            wsFailed = true;
+            markDelayed();
+            startPolling();
+          }
+        }, 16000);
       };
+      
       socket.onmessage = (event) => {
-        const payload = JSON.parse(event.data) as { data?: Quote[]; timestamp?: string };
         window.clearTimeout(staleTimer);
-        staleTimer = window.setTimeout(markDelayed, 16000);
+        const payload = JSON.parse(event.data) as { data?: Quote[]; timestamp?: string };
+        staleTimer = window.setTimeout(() => {
+          if (!wsFailed) {
+            wsFailed = true;
+            markDelayed();
+            startPolling();
+          }
+        }, 16000);
         setState({ status: "live", quotes: payload.data || [], lastUpdate: payload.timestamp });
       };
-      socket.onerror = markDelayed;
+      
+      socket.onerror = () => {
+        if (!wsFailed) {
+          wsFailed = true;
+          markDelayed();
+          startPolling();
+        }
+      };
+      
       socket.onclose = () => {
-        if (!closed) markDelayed();
+        if (!closed && !wsFailed) {
+          wsFailed = true;
+          markDelayed();
+          startPolling();
+        } else if (!closed) {
+          markDelayed();
+        }
       };
     } catch {
       markDelayed();
+      startPolling();
     }
 
     return () => {
       closed = true;
       window.clearTimeout(staleTimer);
+      stopPolling();
       socket?.close();
     };
   }, [key]);
@@ -1020,6 +1138,8 @@ function Topbar({
             <span>{user.email.split("@")[0]} • Pro Seat</span>
           </div>
         )}
+        {/* Connection Status Indicator */}
+        <ConnectionStatusIndicator />
         <button className="desk-icon-btn" onClick={handleThemeToggle} title={activeIsDark ? "Switch to light mode" : "Switch to dark mode"}>
           {activeIsDark ? <Sun size={16} /> : <Moon size={16} />}
         </button>

@@ -65,7 +65,7 @@ export default function GoldTradingStudio({
     queryKey: ["market-analysis", targetSymbol],
     queryFn: async () => {
       try {
-        const response: any = await analyze_market(targetSymbol);
+        const response: any = await analyzeMarket(targetSymbol);
         setAnalysis(response);
         setZones(response.zones || []);
         setSignal(response.signal);
@@ -113,7 +113,7 @@ export default function GoldTradingStudio({
       return;
     }
     // In a real implementation, this would send the trade to the backend
-    showToast(`تم إرسال أمر:${signalAction === "buy" ? "شراء" : "بيع"} ${targetSymbol}`);
+    showToast("تم إرسال أمر:" + (signalAction === "buy" ? "شراء" : "بيع") + " " + targetSymbol);
   };
 
   // Show toast
@@ -152,6 +152,122 @@ export default function GoldTradingStudio({
     );
   }
 
+  // Helper function to generate className for zones
+  const getZoneClassName = (zone: any, selectedZone: any | null) => {
+    const base = "p-3 rounded-lg cursor-pointer";
+    if (selectedZone?.name === zone.name) {
+      return base + " bg-[--accent-teal]/20 border-[--accent-teal]/50";
+    }
+    return base + " bg-transparent hover:bg-[--bg-hover]";
+  };
+
+  // Helper function to generate zone div class
+  const getZoneDivClass = (zoneType: string) => {
+    if (zoneType === "support") {
+      return "h-4 rounded-full bg-green-500 w-4 inline-block mr-2";
+    }
+    return "h-4 rounded-full bg-red-500 w-4 inline-block mr-2";
+  };
+
+  // Helper for button class
+  const getButtonClass = (action: string) => {
+    if (action === "hold") {
+      return "w-full px-4 py-2 rounded-lg font-medium opacity-50 cursor-not-allowed";
+    }
+    return "w-full px-4 py-2 rounded-lg font-medium bg-[--accent-teal]/20 hover:bg-[--accent-teal]/50 text-[--accent-teal] transition-colors";
+  };
+
+  // Render zones map
+  const renderZones = () => {
+    if (zones.length === 0) return null;
+    return (
+      <div className="mt-4 space-y-3">
+        <h3 className="text-sm font-medium mb-2">
+          مناطق الدعم والمقاومة
+        </h3>
+        <div className="grid grid-cols-2 gap-2">
+          {zones.slice(0, 4).map((zone: any) => (
+            <div
+              key={zone.name}
+              onClick={() => handleZoneSelect(zone)}
+              className={getZoneClassName(zone, selectedZone)}
+            >
+              <div className={getZoneDivClass(zone.zone_type)}></div>
+              <span className="text-xs">{zone.zone_type.toUpperCase()}</span>
+              <span className="text-xs block mt-1">
+                {zone.high?.toFixed(2)} / {zone.low?.toFixed(2)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Render signal section
+  const renderSignalSection = () => {
+    if (signalAction === "hold") return null;
+    return (
+      <div className="mt-4 p-4 rounded-lg border-t border-b">
+        <h3 className="text-sm font-medium mb-3">
+          {signalAction === "buy" ? "🟢 إشارة شراء" : "🔴 إشارة بيع"}
+        </h3>
+
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <p className="text-xs text-[--text-muted]">نقطة الدخول</p>
+            <p className="font-medium">{signalEntry?.toFixed(2) || "N/A"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-[--text-muted]">وقف الخسارة</p>
+            <p className="font-medium">{signalSL?.toFixed(2) || "N/A"}</p>
+          </div>
+        </div>
+
+        {signalTP.length > 0 && (
+          <div>
+            <p className="text-xs text-[--text-muted]">أخذ الأرباح</p>
+            <div className="grid grid-cols-2 gap-1">
+              {signalTP.map((tp: number, idx: number) => (
+                <span
+                  key={idx}
+                  className="px-2 py-1 text-xs rounded bg-green-100/30 text-green-400"
+                >
+                  TP{idx + 1}: {tp.toFixed(2)}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {signalRR > 0 && (
+          <div className="mt-2 pt-2 border-t">
+            <p className="text-xs text-[--text-muted]">نسبة المخاطرة/العائد</p>
+            <p className="font-medium text-green-500">
+              {signalRR >= 1 ? "جيد" : "منخفض"} ({signalRR}:1)
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render action button
+  const renderActionButton = () => {
+    return (
+      <div className="mt-6">
+        <button
+          onClick={executeTrade}
+          className={getButtonClass(signalAction)}
+        >
+          {signalAction === "hold"
+            ? "تحليل جاري..."
+            : (signalAction === "buy" ? "شراء" : "بيع") + " " + targetSymbol}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="p-6 bg-[--bg-surface] rounded-lg border border-[--border]">
       <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -164,16 +280,16 @@ export default function GoldTradingStudio({
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-[--text-muted]">الرمز:</span>
-          <span className="font-medium {trendColor}">
+          <span className={`font-medium ${trendColor}`}>
             {targetSymbol}
           </span>
         </div>
       </div>
 
       {/* Trend Indicator */}
-      <div className="mt-4 p-3 rounded-lg {trendColor}/20 {trendColor}/50 border {trendColor}/20">
+      <div className="mt-4 p-3 rounded-lg text-green-500/20 text-red-500/50 border text-green-500/20">
         <div className="flex items-center gap-2">
-          <span className="lucide-react {trendColor === 'text-green-500' ? 'TrendingUp' : trendColor === 'text-red-500' ? 'TrendingDown' : 'Zap'} mr-1"></span>
+          <span className="lucide-react TrendingUp mr-1"></span>
           <span>{analysis?.trend?.toUpperCase() || "NEUTRAL"}</span>
         </div>
         <p className="text-xs text-[--text-muted]">
@@ -181,85 +297,11 @@ export default function GoldTradingStudio({
         </p>
       </div>
 
-      {/* Zones Section */}
-      {zones.length > 0 && (
-        <div className="mt-4 space-y-3">
-          <h3 className="text-sm font-medium mb-2">
-            مناطق الدعم والمقاومة
-          </h3>
-          <div className="grid grid-cols-2 gap-2">
-            {zones.slice(0, 4).map((zone: any) => (
-              <div
-                key={zone.name}
-                onClick={() => handleZoneSelect(zone)}
-                className={`p-3 rounded-lg cursor-pointer ${
-                  selectedZone?.name === zone.name
-                    ? "bg-[--accent-teal]/20 border-[--accent-teal]/50"
-                    : "bg-transparent hover:bg-[--bg-hover]"
-                }`}
-              >
-                <div className="h-4 rounded-full bg-{zone.zone_type === "support" ? "green-500" : "red-500"} w-4 inline-block mr-2"></div>
-                <span className="text-xs">{zone.zone_type.toUpperCase()}</span>
-                <span className="text-xs block mt-1">{zone.high?.toFixed(2)} / {zone.low?.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {renderZones()}
 
-      {/* Signal Section */}
-      <div className="mt-4 p-4 rounded-lg border-t border-b {signalAction === "buy" ? "bg-green-100/50" : signalAction === "sell" ? "bg-red-100/50" : "bg-gray-100/50"}">
-        <h3 className="text-sm font-medium mb-3">
-          {signalAction === "buy" ? "🟢 إشارة شراء" : signalAction === "sell" ? "🔴 إشارة بيع" : "⚪ Hold"}
-        </h3>
+      {renderSignalSection()}
 
-        {signalAction !== "hold" && (
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <p className="text-xs text-[--text-muted]">نقطة الدخول</p>
-              <p className="font-medium">{signalEntry?.toFixed(2) || "N/A"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-[--text-muted]">وقف الخسارة</p>
-              <p className="font-medium">{signalSL?.toFixed(2) || "N/A"}</p>
-            </div>
-          </div>
-
-          {signalTP.length > 0 && (
-            <div>
-              <p className="text-xs text-[--text-muted]">أخذ الأرباح</p>
-              <div className="grid grid-cols-2 gap-1">
-                {signalTP.map((tp: number, idx: number) => (
-                  <span
-                    key={idx}
-                    className="px-2 py-1 text-xs rounded bg-green-100/30 text-green-400"
-                  >
-                    TP{idx + 1}: {tp.toFixed(2)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {signalRR > 0 && (
-            <div className="mt-2 pt-2 border-t">
-              <p className="text-xs text-[--text-muted]">نسبة المخاطرة/العائد</p>
-              <p className="font-medium text-green-500">{signalRR >= 1 ? "جيد" : "منخفض"} ({signalRR}:1)</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Action Button */}
-      <div className="mt-6">
-        <button
-          onClick={executeTrade}
-          className="w-full px-4 py-2 rounded-lg font-medium {signalAction === "hold" ? "opacity-50 cursor-not-allowed" : "bg-[--accent-teal]/20 hover:bg-[--accent-teal]/50 text-[--accent-teal] transition-colors"}>
-            {signalAction === "hold"
-              ? "تحليل جاري..."
-              : `${signalAction === "buy" ? "شراء" : "بيع"} ${targetSymbol}`}
-        </button>
-      </div>
+      {renderActionButton()}
     </div>
   );
 }
