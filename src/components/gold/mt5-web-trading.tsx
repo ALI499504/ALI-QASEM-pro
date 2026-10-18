@@ -28,9 +28,14 @@ import {
 import {
   createChart,
   CandlestickSeries,
+  HistogramSeries,
+  LineSeries,
   ColorType,
   CrosshairMode,
   LineStyle,
+  type IPriceLine,
+  type ISeriesApi,
+  type Time,
 } from "lightweight-charts";
 
 // ====================== Theme (MT5 dark) ======================
@@ -118,6 +123,29 @@ interface CandleData {
   volume: number;
 }
 
+// ====================== Indicator helpers (EMA series for chart overlay) ======================
+// Returns array aligned with input: null for warm-up, then EMA values.
+function computeEMASeries(values: number[], period: number): (number | null)[] {
+  const k = 2 / (period + 1);
+  const out: (number | null)[] = [];
+  let ema: number | null = null;
+  for (let i = 0; i < values.length; i++) {
+    if (i < period - 1) {
+      out.push(null);
+      continue;
+    }
+    if (ema === null) {
+      // Seed with SMA of first `period` closes
+      const slice = values.slice(0, period);
+      ema = slice.reduce((a, b) => a + b, 0) / period;
+    } else {
+      ema = values[i] * k + ema * (1 - k);
+    }
+    out.push(ema);
+  }
+  return out;
+}
+
 // ====================== Component ======================
 export default function MT5WebTrading() {
   const [market, setMarket] = useState<MarketData | null>(null);
@@ -145,52 +173,69 @@ export default function MT5WebTrading() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const seriesRef = useRef<any>(null);
+  const volumeSeriesRef = useRef<any>(null);
+  const ema50SeriesRef = useRef<any>(null);
+  const ema200SeriesRef = useRef<any>(null);
   const bidLineRef = useRef<any>(null);
   const askLineRef = useRef<any>(null);
   const lastPriceLineRef = useRef<any>(null);
+  // Track the last applied candle times to avoid unnecessary setData() calls (prevents flicker)
+  const prevCandlesKeyRef = useRef<string>("");
+  // Track the last applied candle time (for series.update() on live ticks)
+  const lastCandleTimeRef = useRef<number>(0);
 
-  // ====================== Fetch Market (price + candles) ======================
-  const fetchMarket = useCallback(async () => {
-    try {
-      const r = await fetch("/api/gold/market", { cache: "no-store" });
-      const d = await r.json();
-      if (d?.price) {
-        setMarket({
-          price: d.price.price,
-          bid: d.price.bid ?? d.price.price - 0.15,
-          ask: d.price.ask ?? d.price.price + 0.15,
-          change: d.price.change ?? 0,
-          changePct: d.price.changePct ?? 0,
-          high: d.price.high ?? d.price.price,
-          low: d.price.low ?? d.price.price,
-          open: d.price.open ?? d.price.price,
-          source: d.price.source,
-          timestamp: d.price.timestamp,
+  // ====================== Fetch Market (price + candles for current tf) ======================
+  // Uses tf (timeframe) state to request the right candle interval from the API.
+  // We fetch both price + candles together to ensure they're synced.
+  const fetchMarket = useCallback(
+    async (opts?: { tf?: string }) => {
+      try {
+        const tfParam = opts?.tf ?? tvInterval;
+        const r = await fetch(`/api/gold/market?tf=${encodeURIComponent(tfParam)}&_=${Date.now()}`, {
+          cache: "no-store",
         });
+        const d = await r.json();
+        if (d?.price) {
+          setMarket({
+            price: d.price.price,
+            bid: d.price.bid ?? d.price.price - 0.15,
+            ask: d.price.ask ?? d.price.price + 0.15,
+            change: d.price.change ?? 0,
+            changePct: d.price.changePct ?? 0,
+            high: d.price.high ?? d.price.price,
+            low: d.price.low ?? d.price.price,
+            open: d.price.open ?? d.price.price,
+            source: d.price.source,
+            timestamp: d.price.timestamp,
+          });
+        }
+        if (d?.candles && Array.isArray(d.candles) && d.candles.length > 0) {
+          const cs: CandleData[] = d.candles.map((c: any) => {
+            let t = Number(c.time ?? c.t ?? 0);
+            if (t > 1e12) t = Math.floor(t / 1000); // ms → seconds
+            return {
+              time: t,
+              open: Number(c.open ?? c.o),
+              high: Number(c.high ?? c.h),
+              low: Number(c.low ?? c.l),
+              close: Number(c.close ?? c.c),
+              volume: Number(c.volume ?? c.v ?? 0),
+            };
+          });
+          // Deduplicate by time (lightweight-charts requires strict ascending)
+          const uniq = Array.from(
+            new Map(cs.map((c) => [c.time, c])).values()
+          ).sort((a, b) => a.time - b.time);
+          setCandles(uniq);
+          // Track the last candle time for live updates
+          if (uniq.length > 0) lastCandleTimeRef.current = uniq[uniq.length - 1].time;
+        }
+      } catch (e) {
+        // ignore
       }
-      if (d?.candles && Array.isArray(d.candles) && d.candles.length > 0) {
-        const cs: CandleData[] = d.candles.map((c: any) => {
-          let t = Number(c.time ?? c.t ?? 0);
-          if (t > 1e12) t = Math.floor(t / 1000); // ms → seconds
-          return {
-            time: t,
-            open: Number(c.open ?? c.o),
-            high: Number(c.high ?? c.h),
-            low: Number(c.low ?? c.l),
-            close: Number(c.close ?? c.c),
-            volume: Number(c.volume ?? c.v ?? 0),
-          };
-        });
-        // Deduplicate by time (lightweight-charts requires strict ascending)
-        const uniq = Array.from(
-          new Map(cs.map((c) => [c.time, c])).values()
-        ).sort((a, b) => a.time - b.time);
-        setCandles(uniq);
-      }
-    } catch (e) {
-      // ignore
-    }
-  }, []);
+    },
+    [tvInterval]
+  );
 
   // ====================== Fetch Demo Account ======================
   const fetchAccount = useCallback(async () => {
@@ -210,10 +255,14 @@ export default function MT5WebTrading() {
 
   // ====================== Init effects ======================
   useEffect(() => {
-    fetchMarket();
+    fetchMarket(); // initial full fetch (price + candles)
     fetchAccount();
+
+    // Fetch price + candles every 3s (lightweight — uses cache when no changes)
     const mktInt = setInterval(fetchMarket, 3000);
-    const accInt = setInterval(fetchAccount, 2000);
+    // Refresh account/positions more frequently for live P/L
+    const accInt = setInterval(fetchAccount, 1500);
+
     return () => {
       clearInterval(mktInt);
       clearInterval(accInt);
@@ -221,33 +270,48 @@ export default function MT5WebTrading() {
   }, [fetchMarket, fetchAccount]);
 
   // ====================== Initialize lightweight-charts (MT5-style chart) ======================
-  // Runs once on mount. Creates the chart with MT5 dark theme styling.
+  // Runs once on mount. Creates the chart with MT5 dark theme styling, including:
+  //   • Candlestick series (main)
+  //   • Volume histogram (bottom, colored by direction)
+  //   • EMA 50 + EMA 200 overlay lines (MT5 default indicators)
+  //   • Subtle gradient background via CSS overlay (not blocking chart)
+  //   • Crosshair with proper MT5-style labels
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: COLORS.bg },
+        background: {
+          type: ColorType.Solid,
+          color: COLORS.bg,
+        },
         textColor: COLORS.text,
         fontFamily: "Inter, system-ui, Segoe UI, sans-serif",
         fontSize: 11,
-        attributionLogo: false, // hide TradingView attribution
+        attributionLogo: false,
+        panSize: 0,
       },
       grid: {
-        // MT5 grid is very subtle
-        vertLines: { color: "rgba(255,255,255,0.04)" },
-        horzLines: { color: "rgba(255,255,255,0.04)" },
+        // MT5 grid: very subtle, dotted-style
+        vertLines: {
+          color: "rgba(255,255,255,0.035)",
+          style: LineStyle.Solid,
+        },
+        horzLines: {
+          color: "rgba(255,255,255,0.035)",
+          style: LineStyle.Solid,
+        },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
         vertLine: {
-          color: "rgba(255,255,255,0.3)",
+          color: "rgba(255,255,255,0.4)",
           width: 1,
           style: LineStyle.Dashed,
           labelBackgroundColor: COLORS.accent,
         },
         horzLine: {
-          color: "rgba(255,255,255,0.3)",
+          color: "rgba(255,255,255,0.4)",
           width: 1,
           style: LineStyle.Dashed,
           labelBackgroundColor: COLORS.accent,
@@ -255,34 +319,73 @@ export default function MT5WebTrading() {
       },
       rightPriceScale: {
         borderColor: COLORS.border,
-        scaleMargins: { top: 0.1, bottom: 0.2 },
+        scaleMargins: { top: 0.08, bottom: 0.28 }, // leave 20% bottom for volume
+        entireTextOnly: true,
       },
       timeScale: {
         borderColor: COLORS.border,
         timeVisible: true,
         secondsVisible: false,
-        rightOffset: 4,
-        barSpacing: 8,
+        rightOffset: 5,
+        barSpacing: 9,
+        fixLeftEdge: false,
+        fixRightEdge: false,
       },
       width: chartContainerRef.current.clientWidth,
       height: chartContainerRef.current.clientHeight,
+      autoSize: false,
     });
 
+    // === Volume histogram (colored by candle direction) — at bottom ===
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: "volume" },
+      priceScaleId: "vol", // separate scale
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
+    // Place volume scale at the bottom 20% of chart height
+    chart.priceScale("vol").applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
+
+    // === EMA 50 — yellow/gold (MT5 default) ===
+    const ema50Series = chart.addSeries(LineSeries, {
+      color: "#facc15", // gold yellow
+      lineWidth: 1,
+      lineStyle: LineStyle.Solid,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
+    // === EMA 200 — blue (MT5 default) ===
+    const ema200Series = chart.addSeries(LineSeries, {
+      color: "#3b82f6", // blue
+      lineWidth: 1,
+      lineStyle: LineStyle.Solid,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
+    // === Main candlestick series — drawn LAST so it's on top ===
     const series = chart.addSeries(CandlestickSeries, {
-      // MT5 default colors
+      // MT5 default candle colors — vibrant
       upColor: COLORS.up,
       downColor: COLORS.down,
       borderUpColor: COLORS.up,
       borderDownColor: COLORS.down,
-      wickUpColor: COLORS.up,
-      wickDownColor: COLORS.down,
-      priceLineColorVisible: true,
+      wickUpColor: "rgba(34,197,94,0.85)",
+      wickDownColor: "rgba(239,68,68,0.85)",
       priceLineStyle: LineStyle.Dashed,
       lastValueVisible: true,
     });
 
     chartRef.current = chart;
     seriesRef.current = series;
+    volumeSeriesRef.current = volumeSeries;
+    ema50SeriesRef.current = ema50Series;
+    ema200SeriesRef.current = ema200Series;
 
     setChartLoading(false);
 
@@ -297,7 +400,7 @@ export default function MT5WebTrading() {
     };
     window.addEventListener("resize", handleResize);
 
-    // Also use ResizeObserver for more reliable container resize detection
+    // ResizeObserver for reliable container resize detection
     let resizeObserver: ResizeObserver | null = null;
     if (chartContainerRef.current && typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver(handleResize);
@@ -314,37 +417,102 @@ export default function MT5WebTrading() {
       }
       chartRef.current = null;
       seriesRef.current = null;
+      volumeSeriesRef.current = null;
+      ema50SeriesRef.current = null;
+      ema200SeriesRef.current = null;
       bidLineRef.current = null;
       askLineRef.current = null;
       lastPriceLineRef.current = null;
+      prevCandlesKeyRef.current = "";
+      lastCandleTimeRef.current = 0;
     };
   }, []);
 
-  // ====================== Update candles on chart ======================
+  // ====================== Update candles on chart (with Volume + EMA) ======================
+  // IMPORTANT: We only call setData() when the candle TIME ARRAY has changed
+  // (i.e., a new candle has appeared). This prevents flicker on every price tick.
   useEffect(() => {
     if (!seriesRef.current || candles.length === 0) return;
+
+    // Build a fingerprint of the candle times — if it matches the previous one,
+    // we skip setData() (the candle set hasn't structurally changed, only the
+    // last close price has — that's handled by series.update() below).
+    const candlesKey = candles.map((c) => c.time).join(",");
+    if (candlesKey === prevCandlesKeyRef.current) return;
+    prevCandlesKeyRef.current = candlesKey;
+
     try {
-      const data = candles.map((c) => ({
+      // === Candlesticks ===
+      const ohlcData = candles.map((c) => ({
         time: c.time as any,
         open: c.open,
         high: c.high,
         low: c.low,
         close: c.close,
       }));
-      seriesRef.current.setData(data);
-      chartRef.current?.timeScale().fitContent();
+      seriesRef.current.setData(ohlcData);
+
+      // === Volume histogram — color matches candle direction ===
+      if (volumeSeriesRef.current) {
+        const volData = candles
+          .filter((c) => Number.isFinite(c.volume) && c.volume > 0)
+          .map((c) => ({
+            time: c.time as any,
+            value: c.volume,
+            color:
+              c.close >= c.open
+                ? "rgba(34,197,94,0.45)" // green for up candle
+                : "rgba(239,68,68,0.45)", // red for down candle
+          }));
+        volumeSeriesRef.current.setData(volData);
+      }
+
+      // === EMA 50 (yellow) ===
+      if (ema50SeriesRef.current) {
+        const closes = candles.map((c) => c.close);
+        const ema50Series = computeEMASeries(closes, 50);
+        const ema50Data = candles
+          .map((c, i) => ({
+            time: c.time as any,
+            value: ema50Series[i],
+          }))
+          .filter((d) => d.value !== null);
+        ema50SeriesRef.current.setData(ema50Data);
+      }
+
+      // === EMA 200 (blue) ===
+      if (ema200SeriesRef.current) {
+        const closes = candles.map((c) => c.close);
+        const ema200Series = computeEMASeries(closes, 200);
+        const ema200Data = candles
+          .map((c, i) => ({
+            time: c.time as any,
+            value: ema200Series[i],
+          }))
+          .filter((d) => d.value !== null);
+        ema200SeriesRef.current.setData(ema200Data);
+      }
+
+      // Fit content only on the FIRST load (when chart was empty before)
+      if (lastCandleTimeRef.current === 0 || candles.length > 0) {
+        chartRef.current?.timeScale().fitContent();
+      }
     } catch (e) {
       // ignore
     }
   }, [candles]);
 
-  // ====================== Update last candle in real-time (live tick) ======================
-  // When `market.price` changes, update the most recent candle's close/high/low
+  // ====================== Live tick — update only the last candle (smooth, no flicker) ======================
+  // When `market.price` changes, we update ONLY the last candle using series.update(),
+  // which is the lightweight-charts way of updating a single data point without
+  // re-rendering the entire chart. This produces smooth, flicker-free animation.
   useEffect(() => {
     if (!seriesRef.current || !market || candles.length === 0) return;
     try {
       const lastCandle = candles[candles.length - 1];
       if (!lastCandle) return;
+
+      // === Update candlestick's last candle ===
       const updatedCandle = {
         time: lastCandle.time as any,
         open: lastCandle.open,
@@ -353,6 +521,49 @@ export default function MT5WebTrading() {
         close: market.price,
       };
       seriesRef.current.update(updatedCandle);
+
+      // === Update volume bar (if volume exists) ===
+      if (volumeSeriesRef.current && lastCandle.volume > 0) {
+        volumeSeriesRef.current.update({
+          time: lastCandle.time as any,
+          value: lastCandle.volume,
+          color:
+            lastCandle.close >= lastCandle.open
+              ? "rgba(34,197,94,0.45)"
+              : "rgba(239,68,68,0.45)",
+        });
+      }
+
+      // === Update EMA50 / EMA200 last point (recompute last value) ===
+      // We do this only if the new price actually affects the EMA — that's
+      // always true for EMA, so we recompute the last point of the series.
+      if (ema50SeriesRef.current) {
+        const closes = candles.map((c) => c.close);
+        // Apply live price as the latest close, then recompute last EMA point
+        const closesWithLive = [...closes];
+        closesWithLive[closesWithLive.length - 1] = market.price;
+        const ema50 = computeEMASeries(closesWithLive, 50);
+        const lastEMA = ema50[ema50.length - 1];
+        if (lastEMA !== null && Number.isFinite(lastEMA)) {
+          ema50SeriesRef.current.update({
+            time: lastCandle.time as any,
+            value: lastEMA,
+          });
+        }
+      }
+      if (ema200SeriesRef.current) {
+        const closes = candles.map((c) => c.close);
+        const closesWithLive = [...closes];
+        closesWithLive[closesWithLive.length - 1] = market.price;
+        const ema200 = computeEMASeries(closesWithLive, 200);
+        const lastEMA = ema200[ema200.length - 1];
+        if (lastEMA !== null && Number.isFinite(lastEMA)) {
+          ema200SeriesRef.current.update({
+            time: lastCandle.time as any,
+            value: lastEMA,
+          });
+        }
+      }
     } catch (e) {
       // ignore
     }
@@ -401,7 +612,7 @@ export default function MT5WebTrading() {
       lastPriceLineRef.current = seriesRef.current.createPriceLine({
         price: market.price,
         color: COLORS.accent,
-        lineWidth: 1,
+        lineWidth: 2,
         lineStyle: LineStyle.Solid,
         axisLabelVisible: true,
         title: "LAST",
@@ -412,13 +623,28 @@ export default function MT5WebTrading() {
   }, [market?.price, market?.bid, market?.ask]);
 
   // ====================== Reset chart loading state on timeframe change ======================
-  // (No actual reload needed since we use the same chart; just for visual feedback)
+  // When the timeframe changes, we need to:
+  //   1. Reset the candle cache key (so the next setData will actually run)
+  //   2. Re-fetch candles with the new interval
+  //   3. Show a brief loading overlay
   useEffect(() => {
     setChartLoading(true);
     setChartError(null);
-    // Reload candles from the API with the new interval — server fetch
-    fetchMarket().then(() => setChartLoading(false));
-    const t = setTimeout(() => setChartLoading(false), 1000);
+    // Clear the previous candle cache key so new data will actually be applied
+    prevCandlesKeyRef.current = "";
+    lastCandleTimeRef.current = 0;
+    // Clear existing chart data immediately (so chart doesn't show stale candles)
+    try {
+      seriesRef.current?.setData([]);
+      volumeSeriesRef.current?.setData([]);
+      ema50SeriesRef.current?.setData([]);
+      ema200SeriesRef.current?.setData([]);
+    } catch (e) {
+      // ignore
+    }
+    // Fetch fresh candles with the new timeframe
+    fetchMarket({ tf: tvInterval }).then(() => setChartLoading(false));
+    const t = setTimeout(() => setChartLoading(false), 2000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvInterval]);
@@ -645,12 +871,55 @@ export default function MT5WebTrading() {
 
           {/* MetaTrader-style chart container (lightweight-charts, no iframe) */}
           <div
-            className="relative flex-1"
+            className="relative flex-1 overflow-hidden"
             style={{
-              background: COLORS.bg,
+              // Subtle MT5-style vertical gradient (top: lighter, bottom: darker)
+              background:
+                "linear-gradient(180deg, #131313 0%, #0e0e0e 50%, #0a0a0a 100%)",
               minHeight: 0, // allow flex shrink
             }}
           >
+            {/* Watermark — large faint symbol name (MT5 style) */}
+            <div
+              className="absolute inset-0 flex items-center justify-center pointer-events-none z-0"
+              style={{
+                color: "rgba(255,255,255,0.025)",
+                fontSize: "120px",
+                fontWeight: 900,
+                letterSpacing: "8px",
+                fontFamily: "Inter, system-ui, sans-serif",
+                userSelect: "none",
+              }}
+            >
+              {SYMBOL}
+            </div>
+
+            {/* Subtle indicator label (top-center, like MT5) */}
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0"
+              style={{
+                color: "rgba(250,204,21,0.15)",
+                fontSize: "10px",
+                fontWeight: 600,
+                fontFamily: "Inter, system-ui, sans-serif",
+                transform: "translate(-50%, -120px)",
+              }}
+            >
+              EMA 50
+            </div>
+            <div
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0"
+              style={{
+                color: "rgba(59,130,246,0.15)",
+                fontSize: "10px",
+                fontWeight: 600,
+                fontFamily: "Inter, system-ui, sans-serif",
+                transform: "translate(-50%, -100px)",
+              }}
+            >
+              EMA 200
+            </div>
+
             {/* Chart container — fills the parent */}
             <div
               ref={chartContainerRef}
@@ -659,6 +928,7 @@ export default function MT5WebTrading() {
                 height: "100%",
                 position: "absolute",
                 inset: 0,
+                zIndex: 1,
               }}
             />
 
