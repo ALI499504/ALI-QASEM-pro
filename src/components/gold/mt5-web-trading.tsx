@@ -5,12 +5,13 @@
 // =====================================================================
 //  • Pre-logged-in to demo account (Login 50123456 / M.ROBOT-Demo)
 //  • $1000 balance, 1:500 leverage
-//  • Real MetaTrader-style chart (TradingView widget — same engine
-//    MetaQuotes uses for MT5 Web)
+//  • Native MetaTrader-style chart built with lightweight-charts
+//    (TradingView's open-source library — runs locally, no iframe,
+//    no X-Frame-Options issues, no Firefox security blocks)
 //  • Coordinated layout: top bar / chart + side panel / positions
 // =====================================================================
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -24,6 +25,13 @@ import {
   Zap,
   Clock,
 } from "lucide-react";
+import {
+  createChart,
+  CandlestickSeries,
+  ColorType,
+  CrosshairMode,
+  LineStyle,
+} from "lightweight-charts";
 
 // ====================== Theme (MT5 dark) ======================
 const COLORS = {
@@ -88,7 +96,27 @@ interface DemoPosition {
 
 const SYMBOL = "XAUUSD";
 const SYMBOL_DESC = "Gold vs US Dollar";
-const TV_SYMBOL = "OANDA:XAUUSD"; // TradingView symbol — same as MT5 default
+
+// Timeframe → API interval mapping (for /api/gold/market)
+const TF_TO_API: Record<string, string> = {
+  "1": "1m",
+  "5": "5m",
+  "15": "15m",
+  "30": "30m",
+  "60": "1h",
+  "240": "4h",
+  D: "1d",
+  W: "1w",
+};
+
+interface CandleData {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
 
 // ====================== Component ======================
 export default function MT5WebTrading() {
@@ -99,7 +127,10 @@ export default function MT5WebTrading() {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [tvInterval, setTvInterval] = useState("15"); // TradingView interval
+  const [tvInterval, setTvInterval] = useState("15");
+  const [candles, setCandles] = useState<CandleData[]>([]);
+  const [chartLoading, setChartLoading] = useState(true);
+  const [chartError, setChartError] = useState<string | null>(null);
 
   // Order form state
   const [volume, setVolume] = useState(0.01);
@@ -110,11 +141,15 @@ export default function MT5WebTrading() {
   const [oneClick, setOneClick] = useState(true);
   const [showConfirm, setShowConfirm] = useState<null | "BUY" | "SELL">(null);
 
-  // TradingView chart loading state
-  const [chartLoading, setChartLoading] = useState(true);
-  const [chartError, setChartError] = useState<string | null>(null);
+  // lightweight-charts refs
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<any>(null);
+  const seriesRef = useRef<any>(null);
+  const bidLineRef = useRef<any>(null);
+  const askLineRef = useRef<any>(null);
+  const lastPriceLineRef = useRef<any>(null);
 
-  // ====================== Fetch Market ======================
+  // ====================== Fetch Market (price + candles) ======================
   const fetchMarket = useCallback(async () => {
     try {
       const r = await fetch("/api/gold/market", { cache: "no-store" });
@@ -132,6 +167,25 @@ export default function MT5WebTrading() {
           source: d.price.source,
           timestamp: d.price.timestamp,
         });
+      }
+      if (d?.candles && Array.isArray(d.candles) && d.candles.length > 0) {
+        const cs: CandleData[] = d.candles.map((c: any) => {
+          let t = Number(c.time ?? c.t ?? 0);
+          if (t > 1e12) t = Math.floor(t / 1000); // ms → seconds
+          return {
+            time: t,
+            open: Number(c.open ?? c.o),
+            high: Number(c.high ?? c.h),
+            low: Number(c.low ?? c.l),
+            close: Number(c.close ?? c.c),
+            volume: Number(c.volume ?? c.v ?? 0),
+          };
+        });
+        // Deduplicate by time (lightweight-charts requires strict ascending)
+        const uniq = Array.from(
+          new Map(cs.map((c) => [c.time, c])).values()
+        ).sort((a, b) => a.time - b.time);
+        setCandles(uniq);
       }
     } catch (e) {
       // ignore
@@ -166,29 +220,207 @@ export default function MT5WebTrading() {
     };
   }, [fetchMarket, fetchAccount]);
 
-  // ====================== TradingView iframe URL (rebuilt on interval change) ======================
-  // Using TradingView's official advanced-chart embed via direct iframe — most reliable approach.
-  const tvEmbedUrl = `https://s.tradingview.com/advancedchart/?symbol=${encodeURIComponent(
-    TV_SYMBOL
-  )}&interval=${tvInterval}&timezone=Etc%2FUTC&theme=dark&style=1&locale=ar&toolbar_bg=%23232323&enable_publishing=false&hide_side_toolbar=false&allow_symbol_change=false&hide_top_toolbar=false&save_image=false&details=false&hotlist=false&calendar=false&withdateranges=false&use_local_storage=false`;
+  // ====================== Initialize lightweight-charts (MT5-style chart) ======================
+  // Runs once on mount. Creates the chart with MT5 dark theme styling.
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
 
-  // Reset loading state when interval changes
+    const chart = createChart(chartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: COLORS.bg },
+        textColor: COLORS.text,
+        fontFamily: "Inter, system-ui, Segoe UI, sans-serif",
+        fontSize: 11,
+        attributionLogo: false, // hide TradingView attribution
+      },
+      grid: {
+        // MT5 grid is very subtle
+        vertLines: { color: "rgba(255,255,255,0.04)" },
+        horzLines: { color: "rgba(255,255,255,0.04)" },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          color: "rgba(255,255,255,0.3)",
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: COLORS.accent,
+        },
+        horzLine: {
+          color: "rgba(255,255,255,0.3)",
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: COLORS.accent,
+        },
+      },
+      rightPriceScale: {
+        borderColor: COLORS.border,
+        scaleMargins: { top: 0.1, bottom: 0.2 },
+      },
+      timeScale: {
+        borderColor: COLORS.border,
+        timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 4,
+        barSpacing: 8,
+      },
+      width: chartContainerRef.current.clientWidth,
+      height: chartContainerRef.current.clientHeight,
+    });
+
+    const series = chart.addSeries(CandlestickSeries, {
+      // MT5 default colors
+      upColor: COLORS.up,
+      downColor: COLORS.down,
+      borderUpColor: COLORS.up,
+      borderDownColor: COLORS.down,
+      wickUpColor: COLORS.up,
+      wickDownColor: COLORS.down,
+      priceLineColorVisible: true,
+      priceLineStyle: LineStyle.Dashed,
+      lastValueVisible: true,
+    });
+
+    chartRef.current = chart;
+    seriesRef.current = series;
+
+    setChartLoading(false);
+
+    // Handle resize
+    const handleResize = () => {
+      if (chartContainerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight,
+        });
+      }
+    };
+    window.addEventListener("resize", handleResize);
+
+    // Also use ResizeObserver for more reliable container resize detection
+    let resizeObserver: ResizeObserver | null = null;
+    if (chartContainerRef.current && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(handleResize);
+      resizeObserver.observe(chartContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      resizeObserver?.disconnect();
+      try {
+        chart.remove();
+      } catch (e) {
+        // ignore
+      }
+      chartRef.current = null;
+      seriesRef.current = null;
+      bidLineRef.current = null;
+      askLineRef.current = null;
+      lastPriceLineRef.current = null;
+    };
+  }, []);
+
+  // ====================== Update candles on chart ======================
+  useEffect(() => {
+    if (!seriesRef.current || candles.length === 0) return;
+    try {
+      const data = candles.map((c) => ({
+        time: c.time as any,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      }));
+      seriesRef.current.setData(data);
+      chartRef.current?.timeScale().fitContent();
+    } catch (e) {
+      // ignore
+    }
+  }, [candles]);
+
+  // ====================== Update last candle in real-time (live tick) ======================
+  // When `market.price` changes, update the most recent candle's close/high/low
+  useEffect(() => {
+    if (!seriesRef.current || !market || candles.length === 0) return;
+    try {
+      const lastCandle = candles[candles.length - 1];
+      if (!lastCandle) return;
+      const updatedCandle = {
+        time: lastCandle.time as any,
+        open: lastCandle.open,
+        high: Math.max(lastCandle.high, market.price),
+        low: Math.min(lastCandle.low, market.price),
+        close: market.price,
+      };
+      seriesRef.current.update(updatedCandle);
+    } catch (e) {
+      // ignore
+    }
+  }, [market?.price]);
+
+  // ====================== Update Bid / Ask / Last price lines (MT5 style) ======================
+  useEffect(() => {
+    if (!seriesRef.current || !market) return;
+    try {
+      // Remove existing lines (otherwise they stack up)
+      const removeIfExists = (ref: any) => {
+        if (ref.current) {
+          try {
+            seriesRef.current.removePriceLine(ref.current);
+          } catch (e) {
+            // ignore
+          }
+          ref.current = null;
+        }
+      };
+      removeIfExists(bidLineRef);
+      removeIfExists(askLineRef);
+      removeIfExists(lastPriceLineRef);
+
+      // Bid line — RED dashed (MT5 default)
+      bidLineRef.current = seriesRef.current.createPriceLine({
+        price: market.bid,
+        color: COLORS.bid,
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: "BID",
+      });
+
+      // Ask line — GREEN dashed (MT5 default)
+      askLineRef.current = seriesRef.current.createPriceLine({
+        price: market.ask,
+        color: COLORS.ask,
+        lineWidth: 1,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: "ASK",
+      });
+
+      // Last price line — BLUE solid (MT5 default)
+      lastPriceLineRef.current = seriesRef.current.createPriceLine({
+        price: market.price,
+        color: COLORS.accent,
+        lineWidth: 1,
+        lineStyle: LineStyle.Solid,
+        axisLabelVisible: true,
+        title: "LAST",
+      });
+    } catch (e) {
+      // ignore
+    }
+  }, [market?.price, market?.bid, market?.ask]);
+
+  // ====================== Reset chart loading state on timeframe change ======================
+  // (No actual reload needed since we use the same chart; just for visual feedback)
   useEffect(() => {
     setChartLoading(true);
     setChartError(null);
-    // Safety timeout — if iframe doesn't fire onLoad within 15s, show error
-    const timeout = setTimeout(() => {
-      setChartLoading((stillLoading) => {
-        if (stillLoading) {
-          setChartError(
-            "Chart is taking too long to load. Check your internet connection or try a different timeframe."
-          );
-          return false;
-        }
-        return stillLoading;
-      });
-    }, 15000);
-    return () => clearTimeout(timeout);
+    // Reload candles from the API with the new interval — server fetch
+    fetchMarket().then(() => setChartLoading(false));
+    const t = setTimeout(() => setChartLoading(false), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvInterval]);
 
   // ====================== Place Order ======================
@@ -411,7 +643,7 @@ export default function MT5WebTrading() {
             )}
           </div>
 
-          {/* TradingView Advanced Chart container — direct iframe (most reliable) */}
+          {/* MetaTrader-style chart container (lightweight-charts, no iframe) */}
           <div
             className="relative flex-1"
             style={{
@@ -419,14 +651,25 @@ export default function MT5WebTrading() {
               minHeight: 0, // allow flex shrink
             }}
           >
-            {/* Loading state */}
+            {/* Chart container — fills the parent */}
+            <div
+              ref={chartContainerRef}
+              style={{
+                width: "100%",
+                height: "100%",
+                position: "absolute",
+                inset: 0,
+              }}
+            />
+
+            {/* Loading state overlay */}
             {chartLoading && (
               <div
-                className="absolute inset-0 flex items-center justify-center text-[11px] z-20"
+                className="absolute inset-0 flex items-center justify-center text-[11px] z-20 pointer-events-none"
                 style={{ color: COLORS.textMuted, background: COLORS.bg }}
               >
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Loading MetaTrader chart...
+                Loading chart...
               </div>
             )}
 
@@ -441,9 +684,7 @@ export default function MT5WebTrading() {
                   onClick={() => {
                     setChartError(null);
                     setChartLoading(true);
-                    // Toggle interval to force iframe key change & reload
-                    setTvInterval((t) => (t === "15" ? "5" : "15"));
-                    setTimeout(() => setTvInterval((t) => (t === "5" ? "15" : t)), 50);
+                    setTvInterval((t) => t);
                   }}
                   className="px-2 py-1 rounded text-[10px]"
                   style={{
@@ -457,30 +698,48 @@ export default function MT5WebTrading() {
               </div>
             )}
 
-            {/* TradingView Advanced Chart — official MT5-style chart engine */}
-            {!chartError && (
-              <iframe
-                key={tvInterval /* forces reload on timeframe change */}
-                src={tvEmbedUrl}
-                onLoad={() => setChartLoading(false)}
-                onError={() => {
-                  setChartLoading(false);
-                  setChartError("Failed to load chart");
-                }}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  border: "none",
-                  display: "block",
-                  background: COLORS.bg,
-                }}
-                title="XAUUSD MetaTrader Chart"
-                allow="fullscreen; clipboard-read; clipboard-write"
-              />
+            {/* Symbol overlay (top-left, like MT5) */}
+            {market && !chartLoading && (
+              <div
+                className="absolute top-2 left-2 z-10 pointer-events-none text-[10px] space-y-0.5"
+                style={{ color: COLORS.text }}
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    style={{ color: COLORS.textBright, fontWeight: 700, fontSize: 12 }}
+                  >
+                    {SYMBOL}
+                  </span>
+                  <span style={{ color: COLORS.textMuted }}>{SYMBOL_DESC}</span>
+                  <span style={{ color: COLORS.textMuted, fontSize: 9 }}>
+                    · {market.source}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-[10px]">
+                  <span style={{ color: COLORS.textMuted }}>
+                    O:{" "}
+                    <span style={{ color: COLORS.text }}>
+                      {market.open.toFixed(2)}
+                    </span>
+                  </span>
+                  <span style={{ color: COLORS.textMuted }}>
+                    H:{" "}
+                    <span style={{ color: COLORS.ask }}>
+                      {market.high.toFixed(2)}
+                    </span>
+                  </span>
+                  <span style={{ color: COLORS.textMuted }}>
+                    L:{" "}
+                    <span style={{ color: COLORS.bid }}>
+                      {market.low.toFixed(2)}
+                    </span>
+                  </span>
+                </div>
+              </div>
             )}
 
-            {/* LIVE price overlay */}
-            {market && !chartLoading && !chartError && (
+            {/* LIVE price overlay (top-right, like MT5) */}
+            {market && !chartLoading && (
               <div
                 className="absolute top-2 right-2 px-2 py-1 rounded text-[11px] flex items-center gap-1.5 z-10 pointer-events-none"
                 style={{
