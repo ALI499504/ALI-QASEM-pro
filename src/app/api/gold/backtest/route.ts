@@ -70,13 +70,14 @@ interface BacktestResult {
 
 const INITIAL_BALANCE = 1000; // user spec: $1000 account
 const RISK_PER_TRADE = 0.01; // 1% per trade = $10 max risk
-const MAX_HOLD_BARS = 72; // 72 hours max hold
+const MAX_HOLD_BARS = 144; // 6 days max hold (longer for R:R 1:3)
+// === Confluence Hybrid Strategy: R:R = 1:3 ===
 const SL_PCT = 0.006; // 0.6% stop loss
-const TP_PCT = 0.009; // 0.9% take profit → R:R = 1:1.5 (min 1.3, target 1:3)
+const TP_PCT = 0.018; // 1.8% take profit → R:R = 1:3
 const MAX_LOT_SIZE = 0.01; // cap lot size for $1000 account
 const LOOKBACK = 120;
 const MIN_ADX = 20;
-const MIN_CONFIDENCE = 55;
+const MIN_CONFIDENCE = 60; // raised from 55 to 60 (quality over quantity)
 const MIN_RR_RATIO = 1.3; // user requirement: minimum R:R 1:1.3-3
 
 async function fetch1YearCandles(): Promise<Candle[]> {
@@ -261,12 +262,12 @@ export async function GET() {
             const side: "BUY" | "SELL" = shouldBuy ? "BUY" : "SELL";
 
             const slDist = currentPrice * SL_PCT;
-            const tpDist = currentPrice * TP_PCT;
+            const tpDist = currentPrice * TP_PCT; // R:R = 1:3
             const stopLoss = side === "BUY" ? currentPrice - slDist : currentPrice + slDist;
             const takeProfit = side === "BUY" ? currentPrice + tpDist : currentPrice - tpDist;
 
             const riskAmount = balance * RISK_PER_TRADE;
-            const lotSize = Math.min(MAX_LOT_SIZE, Math.max(0.01, riskAmount / slDist));
+            const lotSize = 0.01; // fixed 0.01 for $1000
 
             currentTrade = {
               side,
@@ -391,7 +392,7 @@ export async function GET() {
       startDate: candles[LOOKBACK] ? new Date(candles[LOOKBACK].time * 1000).toISOString() : "",
       endDate: candles[candles.length - 1] ? new Date(candles[candles.length - 1].time * 1000).toISOString() : "",
       totalCandles: candles.length,
-      source: "XAUUSD Yahoo GC=F 1-YEAR backtest + ensemble-ml + strict-risk",
+      source: "XAUUSD Confluence Hybrid (SMC+Wyckoff+HTF) R:R 1:3 backtest",
     };
 
     return NextResponse.json(JSON.parse(JSON.stringify(result, (k, v) => v === Infinity ? 999 : v === -Infinity ? -999 : v)));
