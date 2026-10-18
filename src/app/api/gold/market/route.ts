@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { fetchGoldPrice } from "@/lib/gold-price";
+import { fetchSpotXAUUSD } from "@/lib/spot-price";
+import { fetchGoldPrice as fetchYahooPrice } from "@/lib/gold-price";
 import { fetchCandles, computeIndicators, setLastKnownPrice } from "@/lib/indicators";
 
 export const dynamic = "force-dynamic";
@@ -7,11 +8,21 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const price = await fetchGoldPrice();
-    setLastKnownPrice(price.price);
-    // Use REAL Binance 5m candles (120 = last 10 hours of price action)
+    // Try spot price first (real broker-grade XAUUSD)
+    let price;
+    try {
+      const spot = await fetchSpotXAUUSD();
+      price = spot;
+      setLastKnownPrice(price.price);
+    } catch {
+      // Fallback to Yahoo
+      price = await fetchYahooPrice();
+      setLastKnownPrice(price.price);
+    }
+
     const candles = await fetchCandles("5m", 120);
     const indicators = computeIndicators(candles);
+
     return NextResponse.json({
       price,
       candles,
