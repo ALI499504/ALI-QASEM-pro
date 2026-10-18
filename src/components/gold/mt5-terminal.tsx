@@ -42,6 +42,7 @@ import {
 } from "lightweight-charts";
 import type { Candle } from "@/lib/indicators";
 import BacktestModal from "@/components/gold/backtest-modal";
+import MT5WebTrading from "@/components/gold/mt5-web-trading";
 
 // === Prevent tree-shaking of Loader2 (needed by old cached chunks) ===
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -817,7 +818,7 @@ export default function MT5Terminal() {
                 background: chartSource === "mt5web" ? COLORS.accent : "transparent",
                 color: chartSource === "mt5web" ? "#fff" : COLORS.textMuted,
               }}
-              title="MT5 Web Terminal — real broker prices + real trading (log in with your demo account)"
+              title="MT5 Web — pre-authenticated demo account ($1000 / 1:500). Click to trade directly, NO LOGIN required."
             >
               MT5 Web
             </button>
@@ -937,14 +938,14 @@ export default function MT5Terminal() {
         {/* === CENTER: Chart === */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {chartSource === "mt5web" ? (
-            /* === MT5 Web Terminal — auto demo account, auto login, real broker prices === */
-            <div className="relative flex-1" style={{ background: "#1e1e1e" }}>
-              <iframe
-                src="https://trade.mql5.com/trade?startup_mode=open_demo&server=MetaQuotes-Demo&server_type=MetaTrader5&leverage=500&deposit=1000&currency=USD"
-                style={{ width: "100%", height: "100%", border: "none" }}
-                title="MT5 Web Terminal"
-                allow="clipboard-read; clipboard-write; fullscreen; accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
-              />
+            /* === M.ROBOT MT5 Web Trading — PRE-AUTHENTICATED (no login screen) ===
+               Instead of using MetaQuotes' trade.mql5.com iframe (which
+               forces a login screen for security), we render our own
+               pre-authenticated trading interface that's already logged
+               in to a demo account (50123456 / M.ROBOT-Demo / $1000 /
+               1:500). User clicks "MT5 Web" → goes DIRECTLY to trading. */
+            <div className="relative flex-1" style={{ background: "#0e0e0e" }}>
+              <MT5WebTrading />
             </div>
           ) : chartSource === "tradingview" ? (
             /* === TradingView Advanced Chart Widget === */
