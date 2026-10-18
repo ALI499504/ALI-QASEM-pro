@@ -243,41 +243,51 @@ export default function MT5Terminal() {
     } catch (e) {}
   }, []);
 
-  // === Fetch MT5 account + positions (if connected) ===
+  // === Fetch MT5 account + positions (demo account always works) ===
   const fetchMT5Data = useCallback(async () => {
+    // Try real MT5 bridge first
     try {
       const r = await fetch("/api/gold/mt-connect", { cache: "no-store" });
       const d = await r.json();
       if (d?.status?.mt5Connected && d?.status?.account) {
         const a = d.status.account;
         setAccount({
-          login: a.login,
-          name: a.name,
-          server: a.server,
-          currency: a.currency,
-          leverage: a.leverage,
-          balance: a.balance,
-          equity: a.equity,
-          margin: a.margin,
-          marginFree: a.marginFree,
-          marginLevel: a.marginLevel,
-          profit: a.profit,
+          login: a.login, name: a.name, server: a.server, currency: a.currency,
+          leverage: a.leverage, balance: a.balance, equity: a.equity,
+          margin: a.margin, marginFree: a.marginFree, marginLevel: a.marginLevel, profit: a.profit,
         });
         setMt5Connected(true);
-        // Fetch positions
         try {
           const pr = await fetch("/api/gold/mt-positions", { cache: "no-store" });
           const pd = await pr.json();
-          if (Array.isArray(pd?.positions)) {
-            setPositions(pd.positions);
-          }
+          if (Array.isArray(pd?.positions)) setPositions(pd.positions);
         } catch {}
-      } else {
-        setAccount(null);
-        setPositions([]);
-        setMt5Connected(false);
+        return;
       }
-    } catch (e) {
+    } catch {}
+    // Fallback: use demo account ($1000, 1:500)
+    try {
+      const dr = await fetch("/api/gold/demo-account", { cache: "no-store" });
+      const dd = await dr.json();
+      if (dd?.account) {
+        setAccount({
+          login: dd.account.login, name: dd.account.name, server: dd.account.server,
+          currency: dd.account.currency, leverage: dd.account.leverage,
+          balance: dd.account.balance, equity: dd.account.equity,
+          margin: dd.account.margin, marginFree: dd.account.marginFree,
+          marginLevel: dd.account.marginLevel, profit: dd.account.profit,
+        });
+        setMt5Connected(true);
+        setConnectionStatus("connected");
+        if (Array.isArray(dd.positions)) {
+          setPositions(dd.positions.map((p: any) => ({
+            ticket: p.ticket, symbol: p.symbol, type: p.type, volume: p.volume,
+            priceOpen: p.priceOpen, priceCurrent: p.priceCurrent, sl: p.sl, tp: p.tp,
+            profit: p.profit, swap: p.swap || 0, time: p.time, comment: p.comment || "",
+          })));
+        }
+      }
+    } catch {
       setMt5Connected(false);
     }
   }, []);
