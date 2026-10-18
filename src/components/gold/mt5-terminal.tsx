@@ -172,7 +172,7 @@ export default function MT5Terminal() {
   const [history, setHistory] = useState<any[]>([]);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("connecting");
-  const [chartSource, setChartSource] = useState<"mt5" | "tradingview">("mt5"); // chart switcher
+  const [chartSource, setChartSource] = useState<"mt5" | "tradingview" | "mt5web">("mt5"); // chart switcher
   const [tvSignals, setTVSignals] = useState<any[]>([]);
   const [tvDecisions, setTVDecisions] = useState<any[]>([]);
   // === Backtest state ===
@@ -797,7 +797,7 @@ export default function MT5Terminal() {
           <span>Bar mode: Candlesticks</span>
           <span>•</span>
           <span>Scale: Auto</span>
-          {/* === Chart Source Switcher: MT5 / TradingView === */}
+          {/* === Chart Source Switcher: MT5 / TradingView / MT5 Web === */}
           <div className="flex items-center gap-0.5 ml-2 p-0.5 rounded" style={{ background: COLORS.panelHeader }}>
             <button
               onClick={() => setChartSource("mt5")}
@@ -811,13 +811,24 @@ export default function MT5Terminal() {
               MT5
             </button>
             <button
+              onClick={() => setChartSource("mt5web")}
+              className="px-2 py-0.5 rounded text-[10px] font-semibold transition"
+              style={{
+                background: chartSource === "mt5web" ? COLORS.accent : "transparent",
+                color: chartSource === "mt5web" ? "#fff" : COLORS.textMuted,
+              }}
+              title="MT5 Web Terminal — real broker prices + real trading (log in with your demo account)"
+            >
+              MT5 Web
+            </button>
+            <button
               onClick={() => setChartSource("tradingview")}
               className="px-2 py-0.5 rounded text-[10px] font-semibold transition flex items-center gap-1"
               style={{
                 background: chartSource === "tradingview" ? COLORS.accent : "transparent",
                 color: chartSource === "tradingview" ? "#fff" : COLORS.textMuted,
               }}
-              title="Use TradingView Advanced Chart widget (with all TV indicators + strategies)"
+              title="Use TradingView Advanced Chart widget"
             >
               <Tv className="w-2.5 h-2.5" />
               TradingView
@@ -925,7 +936,21 @@ export default function MT5Terminal() {
 
         {/* === CENTER: Chart === */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {chartSource === "tradingview" ? (
+          {chartSource === "mt5web" ? (
+            /* === MT5 Web Terminal — real broker prices + real trading === */
+            <div className="relative flex-1" style={{ background: "#1e1e1e" }}>
+              <iframe
+                src="https://trade.mql5.com/trade?servers=MetaQuotes-Demo,MetaQuotes-Demo,Exness-Main,Exness-Real,ICMarkets-Live,ICMarkets-Demo,Pepperstone-Demo,Pepperstone-Live&server_type=MetaTrader5&startup_mode=open_demo"
+                style={{ width: "100%", height: "100%", border: "none" }}
+                title="MT5 Web Terminal — Real Broker Trading"
+                allow="clipboard-read; clipboard-write; fullscreen"
+              />
+              <div className="absolute top-1 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded text-[9px] font-bold"
+                style={{ background: "rgba(0,122,204,0.9)", color: "#fff" }}>
+                MT5 Web Terminal — سجل دخول بحسابك التجريبي للحصول على أسعار حقيقية لحظية
+              </div>
+            </div>
+          ) : chartSource === "tradingview" ? (
             /* === TradingView Advanced Chart Widget === */
             <div className="relative flex-1" style={{ background: COLORS.chartBg }}>
               <iframe
