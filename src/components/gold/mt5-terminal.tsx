@@ -172,7 +172,7 @@ export default function MT5Terminal() {
   const [history, setHistory] = useState<any[]>([]);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("connecting");
-  const [chartSource, setChartSource] = useState<"mt5" | "tradingview" | "mt5web">("mt5"); // chart switcher
+  const [chartSource, setChartSource] = useState<"mt5" | "tradingview" | "mt5web">("mt5web"); // default to MT5 Web
   const [tvSignals, setTVSignals] = useState<any[]>([]);
   const [tvDecisions, setTVDecisions] = useState<any[]>([]);
   // === Backtest state ===
@@ -937,18 +937,14 @@ export default function MT5Terminal() {
         {/* === CENTER: Chart === */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {chartSource === "mt5web" ? (
-            /* === MT5 Web Terminal — real broker prices + real trading === */
+            /* === MT5 Web Terminal — auto demo account, auto login, real broker prices === */
             <div className="relative flex-1" style={{ background: "#1e1e1e" }}>
               <iframe
-                src="https://trade.mql5.com/trade?servers=MetaQuotes-Demo,MetaQuotes-Demo,Exness-Main,Exness-Real,ICMarkets-Live,ICMarkets-Demo,Pepperstone-Demo,Pepperstone-Live&server_type=MetaTrader5&startup_mode=open_demo"
+                src="https://trade.mql5.com/trade?startup_mode=open_demo&server=MetaQuotes-Demo&server_type=MetaTrader5&leverage=500&deposit=1000&currency=USD"
                 style={{ width: "100%", height: "100%", border: "none" }}
-                title="MT5 Web Terminal — Real Broker Trading"
-                allow="clipboard-read; clipboard-write; fullscreen"
+                title="MT5 Web Terminal"
+                allow="clipboard-read; clipboard-write; fullscreen; accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
               />
-              <div className="absolute top-1 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded text-[9px] font-bold"
-                style={{ background: "rgba(0,122,204,0.9)", color: "#fff" }}>
-                MT5 Web Terminal — سجل دخول بحسابك التجريبي للحصول على أسعار حقيقية لحظية
-              </div>
             </div>
           ) : chartSource === "tradingview" ? (
             /* === TradingView Advanced Chart Widget === */
