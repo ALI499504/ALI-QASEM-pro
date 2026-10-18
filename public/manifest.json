@@ -1,0 +1,44 @@
+{
+  "name": "M.ROBOT — AI Gold Trading Bot",
+  "short_name": "M.ROBOT",
+  "description": "منصة تداول الذهب بالذكاء الاصطناعي — بيانات Binance اللحظية + إشارات AI + نظام وكلاء متعدد",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0e1a",
+  "theme_color": "#d4a574",
+  "dir": "rtl",
+  "lang": "ar",
+  "categories": ["finance", "productivity", "business"],
+  "icons": [
+    {
+      "src": "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "الرسم البياني اللحظي",
+      "url": "/#chart",
+      "description": "عرض الرسم البياني اللحظي للذهب"
+    },
+    {
+      "name": "إشارة AI",
+      "url": "/#signal",
+      "description": "عرض إشارة الذكاء الاصطناعي الحالية"
+    },
+    {
+      "name": "الوكلاء الأذكياء",
+      "url": "/#agents",
+      "description": "إجماع الوكلاء الخمسة"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+// Prisma schema for Gold Trading Bot — Auth + Subscriptions
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  name         String?
+  password     String         // hashed with bcrypt
+  role         String         @default("USER") // USER | ADMIN
+  banned       Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  subscription Subscription?
+}
+
+model SubscriptionPlan {
+  id            String         @id @default(cuid())
+  name          String         @unique // Free, Pro, Enterprise
+  nameAr        String         // مجاني، احترافي، مؤسسي
+  priceMonthly  Float          @default(0)
+  priceYearly   Float          @default(0)
+  maxTrades     Int            @default(10)    // max trades per day
+  maxLotSize    Float          @default(0.1)   // max lot size per trade
+  maxLeverage   Int            @default(10)    // max leverage
+  features      String         @default("[]")  // JSON array of feature strings
+  featuresAr    String         @default("[]")  // JSON array of Arabic feature strings
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id          String           @id @default(cuid())
+  userId      String           @unique
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId      String
+  plan        SubscriptionPlan @relation(fields: [planId], references: [id])
+  status      String           @default("ACTIVE") // ACTIVE | EXPIRED | CANCELLED | PENDING
+  startDate   DateTime         @default(now())
+  endDate     DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
