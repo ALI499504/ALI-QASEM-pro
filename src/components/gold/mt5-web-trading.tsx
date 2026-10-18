@@ -10,7 +10,7 @@
 //  • Coordinated layout: top bar / chart + side panel / positions
 // =====================================================================
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   TrendingUp,
   TrendingDown,
@@ -110,10 +110,9 @@ export default function MT5WebTrading() {
   const [oneClick, setOneClick] = useState(true);
   const [showConfirm, setShowConfirm] = useState<null | "BUY" | "SELL">(null);
 
-  // TradingView widget container ref
-  const tvContainerRef = useRef<HTMLDivElement>(null);
-  const tvScriptRef = useRef<HTMLScriptElement | null>(null);
-  const tvWidgetRef = useRef<any>(null);
+  // TradingView chart loading state
+  const [chartLoading, setChartLoading] = useState(true);
+  const [chartError, setChartError] = useState<string | null>(null);
 
   // ====================== Fetch Market ======================
   const fetchMarket = useCallback(async () => {
@@ -167,88 +166,29 @@ export default function MT5WebTrading() {
     };
   }, [fetchMarket, fetchAccount]);
 
-  // ====================== TradingView Widget ======================
+  // ====================== TradingView iframe URL (rebuilt on interval change) ======================
+  // Using TradingView's official advanced-chart embed via direct iframe — most reliable approach.
+  const tvEmbedUrl = `https://s.tradingview.com/advancedchart/?symbol=${encodeURIComponent(
+    TV_SYMBOL
+  )}&interval=${tvInterval}&timezone=Etc%2FUTC&theme=dark&style=1&locale=ar&toolbar_bg=%23232323&enable_publishing=false&hide_side_toolbar=false&allow_symbol_change=false&hide_top_toolbar=false&save_image=false&details=false&hotlist=false&calendar=false&withdateranges=false&use_local_storage=false`;
+
+  // Reset loading state when interval changes
   useEffect(() => {
-    if (!tvContainerRef.current) return;
-
-    // Remove any existing widget
-    if (tvContainerRef.current.firstChild) {
-      tvContainerRef.current.innerHTML = "";
-    }
-
-    // Load tv.js once
-    const loadTV = () => {
-      if (typeof window === "undefined") return;
-      const w = window as any;
-      if (w.TradingView) {
-        createWidget();
-        return;
-      }
-      // Inject script
-      if (!tvScriptRef.current) {
-        const script = document.createElement("script");
-        script.src = "https://s3.tradingview.com/tv.js";
-        script.async = true;
-        script.onload = createWidget;
-        script.onerror = () => {
-          // Fallback: show error placeholder
-          if (tvContainerRef.current) {
-            tvContainerRef.current.innerHTML =
-              '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-size:11px;font-family:Segoe UI, sans-serif">Chart unavailable — check your connection</div>';
-          }
-        };
-        document.head.appendChild(script);
-        tvScriptRef.current = script;
-      } else {
-        // Script is loading, wait then create
-        const check = setInterval(() => {
-          if ((window as any).TradingView) {
-            clearInterval(check);
-            createWidget();
-          }
-        }, 200);
-      }
-    };
-
-    const createWidget = () => {
-      const w = window as any;
-      if (!w.TradingView || !tvContainerRef.current) return;
-      try {
-        tvWidgetRef.current = new w.TradingView.widget({
-          autosize: true,
-          symbol: TV_SYMBOL,
-          interval: tvInterval,
-          timezone: "Etc/UTC",
-          theme: "dark",
-          style: "1", // Candles
-          locale: "ar_AE",
-          toolbar_bg: COLORS.panelHeader,
-          enable_publishing: false,
-          allow_symbol_change: false,
-          hide_side_toolbar: false,
-          hide_top_toolbar: false,
-          hide_legend: false,
-          save_image: false,
-          details: false,
-          hotlist: false,
-          calendar: false,
-          studies: [],
-          container: tvContainerRef.current,
-        });
-      } catch (e) {
-        // ignore
-      }
-    };
-
-    loadTV();
-
-    return () => {
-      if (tvContainerRef.current) {
-        tvContainerRef.current.innerHTML = "";
-      }
-      tvWidgetRef.current = null;
-    };
-    // Re-init when interval changes
+    setChartLoading(true);
+    setChartError(null);
+    // Safety timeout — if iframe doesn't fire onLoad within 15s, show error
+    const timeout = setTimeout(() => {
+      setChartLoading((stillLoading) => {
+        if (stillLoading) {
+          setChartError(
+            "Chart is taking too long to load. Check your internet connection or try a different timeframe."
+          );
+          return false;
+        }
+        return stillLoading;
+      });
+    }, 15000);
+    return () => clearTimeout(timeout);
   }, [tvInterval]);
 
   // ====================== Place Order ======================
@@ -471,7 +411,7 @@ export default function MT5WebTrading() {
             )}
           </div>
 
-          {/* TradingView chart container */}
+          {/* TradingView Advanced Chart container — direct iframe (most reliable) */}
           <div
             className="relative flex-1"
             style={{
@@ -479,12 +419,68 @@ export default function MT5WebTrading() {
               minHeight: 0, // allow flex shrink
             }}
           >
-            <div
-              ref={tvContainerRef}
-              style={{ width: "100%", height: "100%" }}
-            />
+            {/* Loading state */}
+            {chartLoading && (
+              <div
+                className="absolute inset-0 flex items-center justify-center text-[11px] z-20"
+                style={{ color: COLORS.textMuted, background: COLORS.bg }}
+              >
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Loading MetaTrader chart...
+              </div>
+            )}
+
+            {/* Error state */}
+            {chartError && (
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center text-[11px] z-20 gap-2"
+                style={{ color: COLORS.textMuted, background: COLORS.bg }}
+              >
+                <div style={{ color: COLORS.bid }}>⚠ {chartError}</div>
+                <button
+                  onClick={() => {
+                    setChartError(null);
+                    setChartLoading(true);
+                    // Toggle interval to force iframe key change & reload
+                    setTvInterval((t) => (t === "15" ? "5" : "15"));
+                    setTimeout(() => setTvInterval((t) => (t === "5" ? "15" : t)), 50);
+                  }}
+                  className="px-2 py-1 rounded text-[10px]"
+                  style={{
+                    background: COLORS.panelHeader,
+                    border: `1px solid ${COLORS.border}`,
+                    color: COLORS.text,
+                  }}
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* TradingView Advanced Chart — official MT5-style chart engine */}
+            {!chartError && (
+              <iframe
+                key={tvInterval /* forces reload on timeframe change */}
+                src={tvEmbedUrl}
+                onLoad={() => setChartLoading(false)}
+                onError={() => {
+                  setChartLoading(false);
+                  setChartError("Failed to load chart");
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                  display: "block",
+                  background: COLORS.bg,
+                }}
+                title="XAUUSD MetaTrader Chart"
+                allow="fullscreen; clipboard-read; clipboard-write"
+              />
+            )}
+
             {/* LIVE price overlay */}
-            {market && (
+            {market && !chartLoading && !chartError && (
               <div
                 className="absolute top-2 right-2 px-2 py-1 rounded text-[11px] flex items-center gap-1.5 z-10 pointer-events-none"
                 style={{
