@@ -399,7 +399,8 @@ export default function MT5Terminal() {
     fetchWyckoff();
 
     const marketInterval = setInterval(fetchMarket, 3000);
-    const mt5Interval = setInterval(fetchMT5Data, 15000);
+    const candleInterval = setInterval(() => fetchCandles(timeframe), 10000); // refresh candles every 10s
+    const mt5Interval = setInterval(fetchMT5Data, 5000); // refresh account every 5s
     const agentInterval = setInterval(fetchAgentAlerts, 45000);
     const tvInterval = setInterval(fetchTVSignals, 10000);
     const newsInterval = setInterval(fetchNewsStatus, 60000);
@@ -407,6 +408,7 @@ export default function MT5Terminal() {
 
     return () => {
       clearInterval(marketInterval);
+      clearInterval(candleInterval);
       clearInterval(mt5Interval);
       clearInterval(agentInterval);
       clearInterval(tvInterval);
@@ -415,25 +417,10 @@ export default function MT5Terminal() {
     };
   }, [fetchMarket, fetchCandles, fetchMT5Data, fetchAgentAlerts, fetchTVSignals, fetchNewsStatus, fetchWyckoff, timeframe]);
 
-  // === AUTO-DEMO: enable DEMO MODE when market is closed (price doesn't change) ===
-  const lastPriceRef = useRef(0);
-  const staleCountRef = useRef(0);
-  useEffect(() => {
-    if (!market?.price) return;
-    if (demoMode) return; // already in demo mode
-    if (lastPriceRef.current === market.price) {
-      staleCountRef.current++;
-      // If price hasn't changed for 5 consecutive fetches (~15s), auto-enable DEMO
-      if (staleCountRef.current >= 5) {
-        setDemoMode(true);
-        demoCandlesRef.current = [...candles];
-        staleCountRef.current = 0;
-      }
-    } else {
-      lastPriceRef.current = market.price;
-      staleCountRef.current = 0;
-    }
-  }, [market?.timestamp, demoMode, candles]);
+  // === AUTO-DEMO disabled — user wants real data only ===
+  // const lastPriceRef = useRef(0);
+  // const staleCountRef = useRef(0);
+  // useEffect removed — no auto-DEMO
 
   // === DEMO MODE ENGINE: simulate live price ticks + candle updates ===
   useEffect(() => {
