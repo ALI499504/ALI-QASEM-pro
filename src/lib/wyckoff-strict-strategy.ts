@@ -333,7 +333,7 @@ export async function computeWyckoffSignal(
     };
 
     if (conditions.riskReward.passed) {
-      const riskAmount = accountBalance * 0.01; // 1%
+      const riskAmount = accountBalance * 0.01; // 1% (range 0.5-1.5%)
       const lotSize = 0.01;
       
       return {
@@ -345,7 +345,7 @@ export async function computeWyckoffSignal(
           takeProfit1: tp1,
           takeProfit2: tp2,
           takeProfit3: tp3,
-          riskPercent: 1.0,
+          riskPercent: 1.0, // 1% (range 0.5-1.5%)
           riskAmount,
           lotSize,
           rrRatio,

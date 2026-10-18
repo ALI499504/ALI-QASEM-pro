@@ -1406,7 +1406,7 @@ function TerminalTab({ mt5Connected, account, market, wyckoff }: { mt5Connected:
       <div style={{ color: COLORS.textMuted }}>[{new Date().toLocaleTimeString("en-GB")}] 6 agents online: Analyst, Strategist, Risk, AI, Execution, Performance</div>
       <div style={{ color: COLORS.textMuted }}>[{new Date().toLocaleTimeString("en-GB")}] Strategy 1: SMC/ICT Strict (5 conditions)</div>
       <div style={{ color: COLORS.textMuted }}>[{new Date().toLocaleTimeString("en-GB")}] Strategy 2: Wyckoff Method (Accumulation/Distribution)</div>
-      <div style={{ color: COLORS.textMuted }}>[{new Date().toLocaleTimeString("en-GB")}] Risk: 1% per trade ($10), R:R 1:1.3-3, Lot: 0.01 per $1000, max 5 daily</div>
+      <div style={{ color: COLORS.textMuted }}>[{new Date().toLocaleTimeString("en-GB")}] Risk: 0.5-1.5% per trade ($5-15), R:R 1:1.3-3, Lot: 0.01 per $1000, max 5 daily</div>
       <div style={{ color: COLORS.accent }}>[OK] TradingView Webhook listener ready</div>
       <div style={{ color: COLORS.textMuted }}>[{new Date().toLocaleTimeString("en-GB")}] Webhook URL: /api/gold/tradingview-webhook</div>
       <div style={{ color: COLORS.textMuted }}>[{new Date().toLocaleTimeString("en-GB")}] Hidden TV Monitor: scans incoming TV signals + combines with SMC consensus</div>

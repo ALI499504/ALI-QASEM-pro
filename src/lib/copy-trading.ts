@@ -39,7 +39,7 @@ export interface CopyTradePlan {
 export const DEFAULT_COPY_TRADE_SETTINGS: CopyTradeSettings = {
   masterBalance: 1000,
   followerBalance: 1000,
-  riskPerTradePct: 1.0,
+  riskPerTradePct: 1.0, // 0.5-1.5% dynamic
   maxLotSize: 0.01,
   minLotSize: 0.01,
   lotStep: 0.01,

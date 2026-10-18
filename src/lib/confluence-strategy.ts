@@ -392,7 +392,7 @@ export async function computeConfluenceSignal(
   }
 
   // === ALL CONDITIONS MET — Build trade ===
-  const riskAmount = accountBalance * 0.01; // 1% = $10 on $1000
+  const riskAmount = accountBalance * 0.01; // 1% (range 0.5-1.5%)
   const tp1Dist = slDistance * 1.0;
   const tp2Dist = slDistance * 2.0;
   const tp3Dist = slDistance * 3.0;
@@ -406,7 +406,7 @@ export async function computeConfluenceSignal(
       takeProfit1: htfDirection === "bullish" ? currentPrice + tp1Dist : currentPrice - tp1Dist,
       takeProfit2: htfDirection === "bullish" ? currentPrice + tp2Dist : currentPrice - tp2Dist,
       takeProfit3: htfDirection === "bullish" ? currentPrice + tp3Dist : currentPrice - tp3Dist,
-      riskPercent: 1.0,
+      riskPercent: 1.0, // 1% (range 0.5-1.5%)
       riskAmount,
       lotSize: 0.01, // fixed 0.01 for $1000
       rrRatio: effectiveRR,

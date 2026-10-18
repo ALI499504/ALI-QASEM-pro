@@ -69,8 +69,8 @@ interface BacktestResult {
 }
 
 const INITIAL_BALANCE = 1000; // user spec: $1000 account
-const RISK_PER_TRADE = 0.01; // 1% per trade = $10 max risk
-const MAX_HOLD_BARS = 144; // 6 days max hold (longer for R:R 1:3)
+const RISK_PER_TRADE = 0.01; // 1% baseline (0.5-1.5% dynamic range)
+const MAX_HOLD_BARS = 144; // 6 days max hold for R:R 1:3
 // === Confluence Hybrid Strategy: R:R = 1:3 ===
 const SL_PCT = 0.006; // 0.6% stop loss
 const TP_PCT = 0.018; // 1.8% take profit → R:R = 1:3
@@ -255,8 +255,8 @@ export async function GET() {
           // Stop trading if balance dropped below 50% of initial
           if (balance < INITIAL_BALANCE * 0.5) continue;
 
-          const shouldBuy = trendUp && rsiOk && ensembleBuy && ensemble.confidence >= 40;
-          const shouldSell = trendDown && rsiOk && ensembleSell && ensemble.confidence >= 40;
+          const shouldBuy = trendUp && rsiOk && ensembleBuy && ensemble.confidence >= MIN_CONFIDENCE;
+          const shouldSell = trendDown && rsiOk && ensembleSell && ensemble.confidence >= MIN_CONFIDENCE;
 
           if (shouldBuy || shouldSell) {
             const side: "BUY" | "SELL" = shouldBuy ? "BUY" : "SELL";

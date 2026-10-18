@@ -70,10 +70,10 @@ export function computeRiskManagement(
   // Base risk = 1% of account (HARD CAP, no adjustments)
   // On $1000 account → $10 max risk per trade
   // On 0.01 lot for XAUUSD, SL must be ~$1 to keep risk at $10
-  const baseRiskPercent = 1.0;
+  const baseRiskPercent = 1.0; // 1.0% baseline (0.5-1.5% range)
   // Regime reduces risk in volatile markets, but never increases beyond 1%
   const riskPerTradePercent = Math.min(baseRiskPercent, baseRiskPercent * riskMultiplier);
-  const clampedRiskPercent = Math.min(1.0, Math.max(0.25, riskPerTradePercent));
+  const clampedRiskPercent = Math.min(1.5, Math.max(0.5, riskPerTradePercent));
 
   const riskAmount = accountBalance * (clampedRiskPercent / 100);
   // Hard cap: max $10 risk per trade on $1000 account (user spec)

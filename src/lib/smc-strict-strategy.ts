@@ -618,7 +618,7 @@ export async function computeSMCStrictSignal(
 
   // === ALL 5 CONDITIONS MET — output trade ===
   // Calculate lot size for 1% risk
-  const riskAmount = accountBalance * 0.01; // $10 on $1000
+  const riskAmount = accountBalance * 0.01; // 1% baseline ($10, range 0.5-1.5%)
   // XAUUSD: 1 lot = 100 oz, $1 price move = $100 P/L per lot
   // lotSize = riskAmount / (slDistance * 100)
   const lotSize = 0.01;
@@ -635,7 +635,7 @@ export async function computeSMCStrictSignal(
     takeProfit1: direction === "bullish" ? currentPrice + tp1Dist : currentPrice - tp1Dist,
     takeProfit2: direction === "bullish" ? currentPrice + tp2Dist : currentPrice - tp2Dist,
     takeProfit3: direction === "bullish" ? currentPrice + tp3Dist : currentPrice - tp3Dist,
-    riskPercent: 1.0,
+    riskPercent: 1.0, // 1% (range 0.5-1.5%)
     riskAmount,
     lotSize,
     rrRatio,
