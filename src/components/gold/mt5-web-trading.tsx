@@ -1,34 +1,26 @@
 "use client";
 
 // =====================================================================
-//  M.ROBOT MT5 Web Trading — Faithful MetaTrader 5 Chart Replica
+//  M.ROBOT MT5 Chart — Pure MetaTrader 5 Chart Replica
 // =====================================================================
-//  This component is JUST the chart (candlesticks + indicators + bid/ask
-//  lines + OHLC info top-left + floating one-click trading panel).
+//  This component is JUST the MT5 chart panel, nothing else.
+//  Faithful to the original MT5 chart:
+//    • Pure black background (no watermark, no gradient)
+//    • Candlesticks (green up / red down)
+//    • Volume histogram at bottom (MT5 default)
+//    • EMA 50 (yellow) + EMA 200 (blue) — MT5 defaults
+//    • Bid line (red dashed) + Ask line (green dashed) + Last (blue solid)
+//    • Plain text OHLC info top-left (matches MT5 exactly)
+//    • Right price scale + Bottom time scale
+//    • Subtle grid + Crosshair
 //
-//  All surrounding panels (Market Watch, Navigator, Toolbox, Status Bar,
-//  Title Bar, Menu Bar, Toolbar, Timeframe Bar) are provided by the parent
-//  MT5Terminal component — so the user sees the full MT5 experience.
-//
-//  • Real candlestick data from Yahoo GC=F (via /api/gold/market?tf=)
-//  • Multi-timeframe support (synced with parent's timeframe prop)
-//  • Volume histogram (colored by direction)
-//  • EMA 50 (yellow) + EMA 200 (blue) — MT5 defaults
-//  • Bid line (red dashed) + Ask line (green dashed) + Last (blue solid)
-//  • OHLC info top-left (matches MT5)
-//  • Floating one-click trading panel (BUY/SELL + volume + SL/TP)
-//  • Pre-authenticated demo account (Login 50123456 / M.ROBOT-Demo)
+//  No watermarks, no LIVE badge, no floating trade panels.
+//  All surrounding panels (Market Watch, Navigator, Toolbox, Status Bar)
+//  are provided by the parent MT5Terminal component.
 // =====================================================================
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import {
-  TrendingUp,
-  TrendingDown,
-  Loader2,
-  Activity,
-  Zap,
-  X,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   createChart,
   CandlestickSeries,
@@ -42,10 +34,7 @@ import {
 // ====================== Theme (MT5 dark) ======================
 const COLORS = {
   bg: "#0e0e0e",
-  panelBg: "#1a1a1a",
-  panelHeader: "#232323",
   border: "#2a2a2a",
-  borderLight: "#3a3a3a",
   text: "#d4d4d4",
   textBright: "#ffffff",
   textMuted: "#888888",
@@ -54,7 +43,6 @@ const COLORS = {
   up: "#22c55e",
   down: "#ef4444",
   accent: "#3b82f6",
-  warning: "#f59e0b",
 };
 
 // ====================== Types ======================
@@ -69,21 +57,6 @@ interface MarketData {
   open: number;
   source: string;
   timestamp: number;
-}
-
-interface DemoPosition {
-  ticket: number;
-  symbol: string;
-  type: "BUY" | "SELL";
-  volume: number;
-  priceOpen: number;
-  priceCurrent: number;
-  sl: number;
-  tp: number;
-  profit: number;
-  swap: number;
-  time: number;
-  comment: string;
 }
 
 interface CandleData {
@@ -136,20 +109,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
   const [market, setMarket] = useState<MarketData | null>(null);
   const [candles, setCandles] = useState<CandleData[]>([]);
   const [chartLoading, setChartLoading] = useState(true);
-  const [chartError, setChartError] = useState<string | null>(null);
-  // Internal timeframe state — synced with parent prop
   const [tvInterval, setTvInterval] = useState<string>(TF_TO_API[tfProp] || "15");
-
-  // === Floating one-click trading panel state ===
-  const [showTradePanel, setShowTradePanel] = useState(true);
-  const [volume, setVolume] = useState(0.01);
-  const [useSL, setUseSL] = useState(true);
-  const [useTP, setUseTP] = useState(true);
-  const [slPips, setSlPips] = useState(10);
-  const [tpPips, setTpPips] = useState(30);
-  const [placingOrder, setPlacingOrder] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
 
   // === Chart refs ===
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -299,7 +259,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         autoSize: false,
       });
 
-      // Volume histogram (bottom)
+      // Volume histogram (bottom — MT5 default)
       const volumeSeries = chart.addSeries(HistogramSeries, {
         priceFormat: { type: "volume" },
         priceScaleId: "vol",
@@ -310,7 +270,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         scaleMargins: { top: 0.8, bottom: 0 },
       });
 
-      // EMA 50 (yellow)
+      // EMA 50 (yellow) — MT5 default
       const ema50Series = chart.addSeries(LineSeries, {
         color: "#facc15",
         lineWidth: 1,
@@ -320,7 +280,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         crosshairMarkerVisible: false,
       });
 
-      // EMA 200 (blue)
+      // EMA 200 (blue) — MT5 default
       const ema200Series = chart.addSeries(LineSeries, {
         color: "#3b82f6",
         lineWidth: 1,
@@ -365,7 +325,6 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         resizeObserver.observe(chartContainerRef.current);
       }
 
-      // cleanup function attached to outer return
       (chartRef as any).__cleanup = () => {
         window.removeEventListener("resize", handleResize);
         resizeObserver?.disconnect();
@@ -427,10 +386,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         const closes = candles.map((c) => c.close);
         const ema50 = computeEMASeries(closes, 50);
         const ema50Data = candles
-          .map((c, i) => ({
-            time: c.time as any,
-            value: ema50[i],
-          }))
+          .map((c, i) => ({ time: c.time as any, value: ema50[i] }))
           .filter((d) => d.value !== null);
         ema50SeriesRef.current.setData(ema50Data);
       }
@@ -439,10 +395,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         const closes = candles.map((c) => c.close);
         const ema200 = computeEMASeries(closes, 200);
         const ema200Data = candles
-          .map((c, i) => ({
-            time: c.time as any,
-            value: ema200[i],
-          }))
+          .map((c, i) => ({ time: c.time as any, value: ema200[i] }))
           .filter((d) => d.value !== null);
         ema200SeriesRef.current.setData(ema200Data);
       }
@@ -479,7 +432,6 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         });
       }
 
-      // Update EMA50/EMA200 last point
       const closes = candles.map((c) => c.close);
       closes[closes.length - 1] = market.price;
       if (ema50SeriesRef.current) {
@@ -507,7 +459,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
     }
   }, [market?.price]);
 
-  // ====================== Bid / Ask / Last price lines ======================
+  // ====================== Bid / Ask / Last price lines (MT5 style) ======================
   useEffect(() => {
     if (!seriesRef.current || !market) return;
     try {
@@ -531,7 +483,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         lineWidth: 1,
         lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
-        title: "BID",
+        title: "Bid",
       });
       askLineRef.current = seriesRef.current.createPriceLine({
         price: market.ask,
@@ -539,7 +491,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         lineWidth: 1,
         lineStyle: LineStyle.Dashed,
         axisLabelVisible: true,
-        title: "ASK",
+        title: "Ask",
       });
       lastPriceLineRef.current = seriesRef.current.createPriceLine({
         price: market.price,
@@ -547,7 +499,7 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         lineWidth: 2,
         lineStyle: LineStyle.Solid,
         axisLabelVisible: true,
-        title: "LAST",
+        title: "Last",
       });
     } catch (e) {
       // ignore
@@ -557,7 +509,6 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
   // ====================== Reset chart on timeframe change ======================
   useEffect(() => {
     setChartLoading(true);
-    setChartError(null);
     prevCandlesKeyRef.current = "";
     try {
       seriesRef.current?.setData([]);
@@ -573,65 +524,13 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvInterval]);
 
-  // ====================== Place Order ======================
-  const placeOrder = useCallback(
-    async (side: "BUY" | "SELL") => {
-      if (!market) return;
-      setPlacingOrder(true);
-      setError(null);
-      try {
-        const price = side === "BUY" ? market.ask : market.bid;
-        const sl = useSL ? (side === "BUY" ? price - slPips : price + slPips) : 0;
-        const tp = useTP ? (side === "BUY" ? price + tpPips : price - tpPips) : 0;
-        const r = await fetch("/api/gold/demo-order", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            side,
-            volume,
-            sl: Number(sl.toFixed(2)),
-            tp: Number(tp.toFixed(2)),
-            comment: "M.ROBOT-Web",
-          }),
-        });
-        const d = await r.json();
-        if (d?.success) {
-          setToast(`✓ ${side} ${volume} lot @ ${d.price?.toFixed(2)} (#${d.ticket})`);
-          setTimeout(() => setToast(null), 4000);
-        } else {
-          setError(d?.error || "Order failed");
-        }
-      } catch (e: any) {
-        setError(e?.message || "Network error");
-      } finally {
-        setPlacingOrder(false);
-      }
-    },
-    [market, volume, useSL, useTP, slPips, tpPips]
-  );
-
-  // ====================== Render ======================
+  // ====================== Render — pure MT5 chart, no overlays ======================
   return (
     <div
       className="relative w-full h-full overflow-hidden"
       style={{ background: COLORS.bg, minHeight: 0 }}
     >
-      {/* Watermark — large faint symbol name */}
-      <div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none z-0"
-        style={{
-          color: "rgba(255,255,255,0.025)",
-          fontSize: "120px",
-          fontWeight: 900,
-          letterSpacing: "8px",
-          fontFamily: "Inter, system-ui, sans-serif",
-          userSelect: "none",
-        }}
-      >
-        {SYMBOL}
-      </div>
-
-      {/* Chart container */}
+      {/* Chart container — fills the parent. Pure MT5 chart, no overlays. */}
       <div
         ref={chartContainerRef}
         style={{
@@ -639,11 +538,10 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
           height: "100%",
           position: "absolute",
           inset: 0,
-          zIndex: 1,
         }}
       />
 
-      {/* Loading state */}
+      {/* Loading state — minimal */}
       {chartLoading && (
         <div
           className="absolute inset-0 flex items-center justify-center text-[11px] z-20 pointer-events-none"
@@ -654,34 +552,58 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
         </div>
       )}
 
-      {/* MT5-style OHLC info top-left */}
+      {/* MT5-style OHLC info top-left — plain text, matches MT5 exactly */}
       {market && !chartLoading && (
         <div
           className="absolute top-1.5 left-2 z-10 pointer-events-none text-[10px] leading-tight"
           style={{ color: COLORS.text, fontFamily: "Consolas, monospace" }}
         >
-          <div className="flex items-center gap-2">
+          {/* Line 1: Symbol, Period, Bid, Ask */}
+          <div>
             <span style={{ color: COLORS.textBright, fontWeight: 700, fontSize: 11 }}>
               {SYMBOL}
             </span>
-            <span style={{ color: COLORS.textMuted }}>{tfProp}</span>
-            <span style={{ color: COLORS.textMuted, fontSize: 9 }}>· {market.source}</span>
+            <span style={{ color: COLORS.textMuted }}>,{tfProp}</span>
+            <span style={{ color: COLORS.textMuted, marginLeft: 6 }}>
+              Bid
+            </span>{" "}
+            <span style={{ color: COLORS.bid, fontWeight: 600 }}>
+              {market.bid.toFixed(2)}
+            </span>
+            <span style={{ color: COLORS.textMuted, marginLeft: 6 }}>
+              Ask
+            </span>{" "}
+            <span style={{ color: COLORS.ask, fontWeight: 600 }}>
+              {market.ask.toFixed(2)}
+            </span>
           </div>
-          <div className="text-[9px] mt-0.5" style={{ color: COLORS.textMuted }}>
-            Bid <span style={{ color: COLORS.bid, fontWeight: 600 }}>{market.bid.toFixed(2)}</span>
-            {"  "}
-            Ask <span style={{ color: COLORS.ask, fontWeight: 600 }}>{market.ask.toFixed(2)}</span>
-          </div>
+          {/* Line 2: OHLC of last candle */}
           {candles.length > 0 && (
-            <div className="text-[9px] mt-0.5" style={{ color: COLORS.textMuted }}>
+            <div style={{ color: COLORS.textMuted, marginTop: 1 }}>
               {(() => {
                 const c = candles[candles.length - 1];
                 return (
                   <>
-                    O <span style={{ color: COLORS.text }}>{c.open.toFixed(2)}</span>
-                    {"  "}H <span style={{ color: COLORS.ask }}>{Math.max(c.high, market.price).toFixed(2)}</span>
-                    {"  "}L <span style={{ color: COLORS.bid }}>{Math.min(c.low, market.price).toFixed(2)}</span>
-                    {"  "}C <span style={{ color: market.price >= c.open ? COLORS.ask : COLORS.bid, fontWeight: 600 }}>
+                    O{" "}
+                    <span style={{ color: COLORS.text }}>
+                      {c.open.toFixed(2)}
+                    </span>
+                    {"  "}H{" "}
+                    <span style={{ color: COLORS.ask }}>
+                      {Math.max(c.high, market.price).toFixed(2)}
+                    </span>
+                    {"  "}L{" "}
+                    <span style={{ color: COLORS.bid }}>
+                      {Math.min(c.low, market.price).toFixed(2)}
+                    </span>
+                    {"  "}C{" "}
+                    <span
+                      style={{
+                        color:
+                          market.price >= c.open ? COLORS.ask : COLORS.bid,
+                        fontWeight: 600,
+                      }}
+                    >
                       {market.price.toFixed(2)}
                     </span>
                   </>
@@ -689,226 +611,6 @@ export default function MT5WebTrading({ timeframe: tfProp = "M15" }: { timeframe
               })()}
             </div>
           )}
-        </div>
-      )}
-
-      {/* LIVE price top-right */}
-      {market && !chartLoading && (
-        <div
-          className="absolute top-1.5 right-2 px-2 py-0.5 rounded text-[11px] flex items-center gap-1.5 z-10 pointer-events-none"
-          style={{
-            background: "rgba(0,0,0,0.65)",
-            border: `1px solid ${COLORS.borderLight}`,
-            color: COLORS.textBright,
-          }}
-        >
-          <Activity
-            className="w-3 h-3 animate-pulse"
-            style={{ color: COLORS.accent }}
-          />
-          <span style={{ color: COLORS.textMuted }}>LIVE:</span>
-          <span style={{ fontWeight: 700 }}>{market.price.toFixed(2)}</span>
-        </div>
-      )}
-
-      {/* === Floating One-Click Trading Panel (top-right, below LIVE) === */}
-      {showTradePanel && market && !chartLoading && (
-        <div
-          className="absolute top-10 right-2 z-30 rounded-md shadow-2xl"
-          style={{
-            background: "rgba(26,26,26,0.96)",
-            border: `1px solid ${COLORS.borderLight}`,
-            width: 200,
-            backdropFilter: "blur(8px)",
-          }}
-        >
-          {/* Header */}
-          <div
-            className="flex items-center justify-between px-2 py-1 text-[10px] font-semibold"
-            style={{
-              background: COLORS.panelHeader,
-              borderBottom: `1px solid ${COLORS.border}`,
-              color: COLORS.textBright,
-            }}
-          >
-            <span>One-Click Trading</span>
-            <button
-              onClick={() => setShowTradePanel(false)}
-              className="hover:opacity-70"
-              style={{ color: COLORS.textMuted }}
-            >
-              <X className="w-2.5 h-2.5" />
-            </button>
-          </div>
-
-          {/* Body */}
-          <div className="p-2 space-y-2">
-            {/* Volume */}
-            <div>
-              <label
-                className="text-[8px] uppercase block mb-0.5"
-                style={{ color: COLORS.textMuted }}
-              >
-                Volume (Lots)
-              </label>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setVolume(Math.max(0.01, +(volume - 0.01).toFixed(2)))}
-                  className="px-1.5 py-0.5 text-[10px] rounded"
-                  style={{
-                    background: COLORS.bg,
-                    border: `1px solid ${COLORS.border}`,
-                    color: COLORS.text,
-                  }}
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  step={0.01}
-                  min={0.01}
-                  value={volume}
-                  onChange={(e) => setVolume(Math.max(0.01, Number(e.target.value)))}
-                  className="flex-1 px-1 py-0.5 text-[10px] text-center rounded"
-                  style={{
-                    background: COLORS.bg,
-                    border: `1px solid ${COLORS.border}`,
-                    color: COLORS.textBright,
-                  }}
-                />
-                <button
-                  onClick={() => setVolume(+(volume + 0.01).toFixed(2))}
-                  className="px-1.5 py-0.5 text-[10px] rounded"
-                  style={{
-                    background: COLORS.bg,
-                    border: `1px solid ${COLORS.border}`,
-                    color: COLORS.text,
-                  }}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            {/* SL / TP compact row */}
-            <div className="grid grid-cols-2 gap-1">
-              <div>
-                <label
-                  className="text-[8px] uppercase block mb-0.5"
-                  style={{ color: COLORS.bid }}
-                >
-                  S/L
-                </label>
-                <input
-                  type="number"
-                  step={0.1}
-                  value={slPips}
-                  disabled={!useSL}
-                  onChange={(e) => setSlPips(Number(e.target.value))}
-                  className="w-full px-1 py-0.5 text-[10px] rounded"
-                  style={{
-                    background: useSL ? COLORS.bg : COLORS.panelHeader,
-                    border: `1px solid ${COLORS.border}`,
-                    color: COLORS.textBright,
-                  }}
-                />
-              </div>
-              <div>
-                <label
-                  className="text-[8px] uppercase block mb-0.5"
-                  style={{ color: COLORS.ask }}
-                >
-                  T/P
-                </label>
-                <input
-                  type="number"
-                  step={0.1}
-                  value={tpPips}
-                  disabled={!useTP}
-                  onChange={(e) => setTpPips(Number(e.target.value))}
-                  className="w-full px-1 py-0.5 text-[10px] rounded"
-                  style={{
-                    background: useTP ? COLORS.bg : COLORS.panelHeader,
-                    border: `1px solid ${COLORS.border}`,
-                    color: COLORS.textBright,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* BUY / SELL buttons */}
-            <div className="space-y-1 pt-0.5">
-              <button
-                onClick={() => placeOrder("SELL")}
-                disabled={placingOrder}
-                className="w-full py-1.5 rounded text-[11px] font-bold flex items-center justify-center gap-1 transition hover:opacity-90 disabled:opacity-50"
-                style={{ background: COLORS.bid, color: "#fff" }}
-              >
-                {placingOrder ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <TrendingDown className="w-3 h-3" />
-                )}
-                SELL {volume} @ {market.bid.toFixed(2)}
-              </button>
-              <button
-                onClick={() => placeOrder("BUY")}
-                disabled={placingOrder}
-                className="w-full py-1.5 rounded text-[11px] font-bold flex items-center justify-center gap-1 transition hover:opacity-90 disabled:opacity-50"
-                style={{ background: COLORS.ask, color: "#fff" }}
-              >
-                {placingOrder ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <TrendingUp className="w-3 h-3" />
-                )}
-                BUY {volume} @ {market.ask.toFixed(2)}
-              </button>
-            </div>
-
-            {error && (
-              <div
-                className="text-[9px] px-1.5 py-1 rounded"
-                style={{
-                  background: `${COLORS.bid}15`,
-                  color: COLORS.bid,
-                  border: `1px solid ${COLORS.bid}40`,
-                }}
-              >
-                ⚠ {error}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Show floating panel button when hidden */}
-      {!showTradePanel && (
-        <button
-          onClick={() => setShowTradePanel(true)}
-          className="absolute top-10 right-2 z-30 px-2 py-1 text-[10px] rounded-md shadow-2xl flex items-center gap-1"
-          style={{
-            background: COLORS.accent,
-            color: "#fff",
-          }}
-        >
-          <Zap className="w-3 h-3" />
-          Show Trade Panel
-        </button>
-      )}
-
-      {/* Toast */}
-      {toast && (
-        <div
-          className="absolute bottom-4 right-4 px-3 py-2 rounded-md text-[11px] z-50 flex items-center gap-2"
-          style={{
-            background: COLORS.panelBg,
-            border: `1px solid ${COLORS.ask}`,
-            color: COLORS.textBright,
-          }}
-        >
-          <Zap className="w-3 h-3" style={{ color: COLORS.ask }} />
-          {toast}
         </div>
       )}
     </div>
