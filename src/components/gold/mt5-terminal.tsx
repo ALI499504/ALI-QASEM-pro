@@ -43,6 +43,8 @@ import {
 } from "lightweight-charts";
 import type { Candle } from "@/lib/indicators";
 import BacktestModal from "@/components/gold/backtest-modal";
+import MT5ConnectionManager from "@/components/gold/mt5-connection-manager";
+import { Server } from "lucide-react";
 
 // === EMA series helper (used for plotting EMA 50 / EMA 200 on chart) ===
 function computeEMASeriesHelper(values: number[], period: number): (number | null)[] {
@@ -201,6 +203,7 @@ export default function MT5Terminal() {
   const [backtestResult, setBacktestResult] = useState<any>(null);
   const [backtestLoading, setBacktestLoading] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
+  const [showMT5Manager, setShowMT5Manager] = useState(false);
   const [newsStatus, setNewsStatus] = useState<any>(null);
   const [newsEvents, setNewsEvents] = useState<any[]>([]);
   const [wyckoffResult, setWyckoffResult] = useState<any>(null);
@@ -265,44 +268,24 @@ export default function MT5Terminal() {
     } catch (e) {}
   }, []);
 
-  // === Fetch MT5 account + positions (demo account always works) ===
+  // === Fetch MT5 account + positions via the professional MT5 Cloud Bridge ===
+  // The bridge is auto-connected on page load (no user intervention needed).
+  // It uses real market data from Binance PAXG + gold-api.com + Yahoo GC=F.
   const fetchMT5Data = useCallback(async () => {
-    // Try real MT5 bridge first
     try {
-      const r = await fetch("/api/gold/mt-connect", { cache: "no-store" });
-      const d = await r.json();
-      if (d?.status?.mt5Connected && d?.status?.account) {
-        const a = d.status.account;
+      const r = await fetch("/api/mt5/status", { cache: "no-store" });
+      const d: any = await r.json();
+      if (d?.connected && d?.account) {
+        const a = d.account;
         setAccount({
           login: a.login, name: a.name, server: a.server, currency: a.currency,
           leverage: a.leverage, balance: a.balance, equity: a.equity,
           margin: a.margin, marginFree: a.marginFree, marginLevel: a.marginLevel, profit: a.profit,
         });
         setMt5Connected(true);
-        try {
-          const pr = await fetch("/api/gold/mt-positions", { cache: "no-store" });
-          const pd = await pr.json();
-          if (Array.isArray(pd?.positions)) setPositions(pd.positions);
-        } catch {}
-        return;
-      }
-    } catch {}
-    // Fallback: use demo account ($1000, 1:500)
-    try {
-      const dr = await fetch("/api/gold/demo-account", { cache: "no-store" });
-      const dd = await dr.json();
-      if (dd?.account) {
-        setAccount({
-          login: dd.account.login, name: dd.account.name, server: dd.account.server,
-          currency: dd.account.currency, leverage: dd.account.leverage,
-          balance: dd.account.balance, equity: dd.account.equity,
-          margin: dd.account.margin, marginFree: dd.account.marginFree,
-          marginLevel: dd.account.marginLevel, profit: dd.account.profit,
-        });
-        setMt5Connected(true);
         setConnectionStatus("connected");
-        if (Array.isArray(dd.positions)) {
-          setPositions(dd.positions.map((p: any) => ({
+        if (Array.isArray(d.positions)) {
+          setPositions(d.positions.map((p: any) => ({
             ticket: p.ticket, symbol: p.symbol, type: p.type, volume: p.volume,
             priceOpen: p.priceOpen, priceCurrent: p.priceCurrent, sl: p.sl, tp: p.tp,
             profit: p.profit, swap: p.swap || 0, time: p.time, comment: p.comment || "",
@@ -846,6 +829,28 @@ export default function MT5Terminal() {
           New Order
         </button>
         <div className="w-px h-4 mx-1" style={{ background: COLORS.border }} />
+        {/* === MT5 Bridge — Connection Manager button === */}
+        <button
+          onClick={() => setShowMT5Manager(true)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-semibold transition hover:opacity-90"
+          style={{
+            background: mt5Connected ? `${COLORS.ask}20` : `${COLORS.bid}20`,
+            color: mt5Connected ? COLORS.ask : COLORS.bid,
+            border: `1px solid ${mt5Connected ? COLORS.ask : COLORS.bid}40`,
+          }}
+          title="MT5 Bridge — Connection Manager"
+        >
+          <Server className="w-3 h-3" />
+          MT5 Bridge
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{
+              background: mt5Connected ? COLORS.ask : COLORS.bid,
+              animation: "pulse 2s infinite",
+            }}
+          />
+        </button>
+        <div className="w-px h-4 mx-1" style={{ background: COLORS.border }} />
         <button className="p-1.5 hover:bg-[#3c3c3c] rounded" title="Refresh">
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
@@ -1267,6 +1272,12 @@ export default function MT5Terminal() {
         result={backtestResult}
         loading={backtestLoading}
         onRun={runBacktest}
+      />
+
+      {/* === MT5 CONNECTION MANAGER MODAL (Professional Bridge Status) === */}
+      <MT5ConnectionManager
+        open={showMT5Manager}
+        onClose={() => setShowMT5Manager(false)}
       />
 
       {/* === STATUS BAR === */}
