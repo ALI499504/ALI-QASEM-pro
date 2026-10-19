@@ -1,6 +1,9 @@
-// Real-time XAUUSD price from multiple broker-grade sources
-// Uses Twelve Data API (free tier: 8 req/min) + gold-api.com + Yahoo GC=F as fallback
-// This provides 100% REAL spot XAUUSD — NO simulation, NO fake data.
+// Real-time XAUUSD price from Binance PAXG (primary) + multiple fallbacks.
+// CRITICAL: Binance PAXG is also the source for candles (in binance-gold.ts),
+// so price and chart ALWAYS match — no spot-vs-futures discrepancy.
+// All sources are REAL — NO simulation, NO synthetic data.
+
+import { fetchRealGoldTicker } from "@/lib/binance-gold";
 
 interface SpotPrice {
   price: number;
@@ -16,17 +19,40 @@ interface SpotPrice {
 }
 
 let cachedPrice: { data: SpotPrice; ts: number } | null = null;
-const CACHE_MS = 500; // 500ms cache — short enough for real-time tick flow without rate-limiting
+const CACHE_MS = 500; // 500ms cache — short enough for real-time tick flow
 
 const TWELVE_DATA_KEY = "demo"; // free demo key — 8 requests/minute
 
 export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
-  // Check cache — returns REAL cached data only, NO simulation
+  // Check cache
   if (cachedPrice && Date.now() - cachedPrice.ts < CACHE_MS) {
     return cachedPrice.data;
   }
 
-  // === Source 1: Twelve Data API (real broker spot price) ===
+  // === PRIMARY: Binance PAXG (matches the candle source — consistent) ===
+  try {
+    const ticker = await fetchRealGoldTicker();
+    if (ticker && Number.isFinite(ticker.price) && ticker.price > 100) {
+      const data: SpotPrice = {
+        price: ticker.price,
+        bid: ticker.bid,
+        ask: ticker.ask,
+        change: ticker.change,
+        changePct: ticker.changePct,
+        high: ticker.high,
+        low: ticker.low,
+        open: ticker.open,
+        timestamp: ticker.timestamp,
+        source: ticker.source, // "Binance PAXG (XAU spot)"
+      };
+      cachedPrice = { data, ts: Date.now() };
+      return data;
+    }
+  } catch {
+    // try next source
+  }
+
+  // === FALLBACK 1: Twelve Data API (real broker spot price) ===
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 5000);
@@ -44,7 +70,7 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
         const low = Number(j.low || price);
         const change = Number(j.change || (price - open));
         const changePct = Number(j.percent_change || ((change / open) * 100));
-        const spread = 0.3; // 0.3 spread (typical for XAUUSD)
+        const spread = 0.3;
         const data: SpotPrice = {
           price,
           bid: price - spread / 2,
@@ -63,7 +89,7 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
     }
   } catch {}
 
-  // === Source 2: gold-api.com (real spot) ===
+  // === FALLBACK 2: gold-api.com (real spot) ===
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 4000);
@@ -95,7 +121,7 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
     }
   } catch {}
 
-  // === Source 3: Yahoo GC=F (real gold futures — fallback) ===
+  // === FALLBACK 3: Yahoo GC=F (real gold futures) ===
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 5000);
@@ -133,7 +159,7 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
     }
   } catch {}
 
-  // Last resort: return last cached real price (NO simulation, NO fallback fake number)
+  // Last resort: return last cached REAL price (NO simulation, NO fallback fake number)
   if (cachedPrice) return cachedPrice.data;
 
   // If we have no data at all, throw — better to show "no data" than fake numbers

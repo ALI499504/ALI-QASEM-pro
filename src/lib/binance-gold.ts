@@ -96,16 +96,72 @@ async function fetchWithTimeout(url: string, ms = 5000, headers: Record<string, 
 }
 
 /**
- * Fetch real-time XAUUSD ticker (spot gold via GC=F futures or gold-api spot).
- * Returns: price, %change, OHLC, volume, bid/ask — all real.
+ * Fetch real-time XAUUSD ticker.
+ *
+ * PRIMARY: Binance PAXG (Paxos Gold token) — 1:1 backed by physical gold,
+ *   trades 24/7, gives real bid/ask, matches spot gold price closely.
+ *   CRITICAL: Binance PAXG is also the source for candles (fetchRealCandles),
+ *   so price and chart always match — no spot-vs-futures discrepancy.
+ *
+ * FALLBACK 1: Yahoo Finance GC=F (gold futures)
+ * FALLBACK 2: gold-api.com (XAU spot — no bid/ask, no OHLC)
+ * LAST RESORT: throw (no fabrication, no simulation)
  */
 export async function fetchRealGoldTicker(): Promise<BinanceTicker> {
-  // Return cache if fresh (< 5s)
-  if (tickerCache && Date.now() - tickerCache.ts < 5_000) {
+  // Return cache if fresh (< 1s — high frequency for live tick)
+  if (tickerCache && Date.now() - tickerCache.ts < 1_000) {
     return tickerCache.data;
   }
 
-  // === PRIMARY: MT5 Bridge (if configured — gives exact broker prices) ===
+  // === PRIMARY: Binance PAXG/USDT — real spot gold (Paxos Gold token) ===
+  try {
+    const r = await fetchWithTimeout(
+      `https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT`,
+      4000,
+    );
+    if (r.ok) {
+      const j: any = await r.json();
+      const last = Number(j?.lastPrice);
+      const bid = Number(j?.bidPrice);
+      const ask = Number(j?.askPrice);
+      const high = Number(j?.highPrice);
+      const low = Number(j?.lowPrice);
+      const open = Number(j?.openPrice);
+      const volume = Number(j?.volume);
+      const quoteVolume = Number(j?.quoteVolume);
+      const count = Number(j?.count);
+      const priceChange = Number(j?.priceChange);
+      const priceChangePercent = Number(j?.priceChangePercent);
+      const weightedAvg = Number(j?.weightedAvgPrice);
+
+      if (Number.isFinite(last) && last > 100) {
+        lastKnownRealPrice = last;
+        const ticker: BinanceTicker = {
+          price: last,
+          change: priceChange || (last - open),
+          changePct: priceChangePercent || (open > 0 ? ((last - open) / open) * 100 : 0),
+          high,
+          low,
+          open,
+          prevClose: open, // Binance 24h ticker uses open as the price 24h ago
+          bid: bid || last - 0.15,
+          ask: ask || last + 0.15,
+          volume,
+          quoteVolume,
+          weightedAvg: weightedAvg || last,
+          count,
+          timestamp: Date.now(),
+          source: "Binance PAXG (XAU spot)",
+        };
+        tickerCache = { data: ticker, ts: Date.now() };
+        return ticker;
+      }
+    }
+  } catch (e) {
+    // try next source
+  }
+
+  // === FALLBACK 1: MT5 Bridge (if configured) ===
   const bridgeConfig = getBridgeConfig();
   if (bridgeConfig) {
     try {
@@ -128,17 +184,17 @@ export async function fetchRealGoldTicker(): Promise<BinanceTicker> {
           weightedAvg: mt.last || mt.bid,
           count: 0,
           timestamp: Date.now(),
-          source: "XAUUSD",
+          source: "MT5 Bridge",
         };
         tickerCache = { data: ticker, ts: Date.now() };
         return ticker;
       }
     } catch (e) {
-      // bridge down — fall through to Yahoo
+      // bridge down — fall through
     }
   }
 
-  // Try Yahoo Finance GC=F (gold futures)
+  // === FALLBACK 2: Yahoo Finance GC=F (gold futures) ===
   try {
     const r = await fetchWithTimeout(
       `https://query1.finance.yahoo.com/v8/finance/chart/GC=F?interval=1d&range=2d`,
@@ -159,7 +215,7 @@ export async function fetchRealGoldTicker(): Promise<BinanceTicker> {
           const low = Number(meta?.regularMarketDayLow ?? Math.min(...closes));
           const open = Number(meta?.regularMarketOpen ?? closes[0] ?? last);
           const volume = Number(quote.volume?.filter((x: any) => x != null).at(-1) ?? 0);
-          const spread = 0.3; // realistic ~5 cent spread
+          const spread = 0.3;
           const ticker: BinanceTicker = {
             price: last,
             change: last - prev,
@@ -175,7 +231,7 @@ export async function fetchRealGoldTicker(): Promise<BinanceTicker> {
             weightedAvg: last,
             count: 0,
             timestamp: Date.now(),
-            source: "XAUUSD",
+            source: "Yahoo GC=F (gold futures)",
           };
           tickerCache = { data: ticker, ts: Date.now() };
           return ticker;
@@ -186,7 +242,7 @@ export async function fetchRealGoldTicker(): Promise<BinanceTicker> {
     // try next source
   }
 
-  // Try gold-api.com (real spot)
+  // === FALLBACK 3: gold-api.com (real spot — no OHLC, no bid/ask) ===
   try {
     const r = await fetchWithTimeout(`https://api.gold-api.com/price/XAU`, 4000);
     if (r.ok) {
@@ -210,7 +266,7 @@ export async function fetchRealGoldTicker(): Promise<BinanceTicker> {
           weightedAvg: last,
           count: 0,
           timestamp: Date.now(),
-          source: "XAUUSD",
+          source: "gold-api.com (XAU spot)",
         };
         tickerCache = { data: ticker, ts: Date.now() };
         return ticker;
@@ -220,14 +276,14 @@ export async function fetchRealGoldTicker(): Promise<BinanceTicker> {
     // try next source
   }
 
-  // Last resort: return the last cached REAL ticker (NO fabrication, NO simulation).
-  // If we have no cached data at all, throw — better to show "no data" than fake prices.
+  // Last resort: return last cached REAL ticker (NO fabrication, NO simulation)
   if (tickerCache) return tickerCache.data;
   throw new Error("All real gold price sources unavailable — no data");
 }
 
 /**
- * Fetch real XAUUSD OHLCV candles from Yahoo Finance (GC=F).
+ * Fetch real XAUUSD OHLCV candles.
+ * @param interval Candle interval (1m, 5m, 15m, 30m, 1h, 4h, 1d)
  * @param interval Candle interval (1m, 5m, 15m, 30m, 1h, 4h, 1d)
  * @param limit Number of candles (max ~300 per request from Yahoo)
  */
@@ -237,18 +293,54 @@ export async function fetchRealCandles(
 ): Promise<Candle[]> {
   const cacheKey = `${interval}:${limit}`;
   const cached = klineCache.get(cacheKey);
-  // Cache duration tuned per interval
+  // Cache duration: 5s for short intervals (allows real-time update feel), longer for higher TFs
   const cacheMs =
     interval === "1m" || interval === "5m" || interval === "15m"
-      ? 30_000
-      : interval === "1h" || interval === "4h"
-        ? 120_000
-        : 300_000;
+      ? 5_000 // 5s — fast refresh for short intervals
+      : interval === "30m"
+        ? 15_000
+        : interval === "1h" || interval === "4h"
+          ? 60_000
+          : 300_000;
   if (cached && Date.now() - cached.ts < cacheMs) {
     return cached.data;
   }
 
-  // === PRIMARY: MT5 Bridge (if configured — gives exact broker candles) ===
+  // === PRIMARY: Binance PAXG/USDT klines (matches the price source — consistent) ===
+  try {
+    const binanceInterval = interval; // Binance uses same codes: 1m, 5m, 15m, 30m, 1h, 4h, 1d
+    const r = await fetchWithTimeout(
+      `https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=${binanceInterval}&limit=${Math.min(limit, 1000)}`,
+      6000,
+    );
+    if (r.ok) {
+      const j: any = await r.json();
+      if (Array.isArray(j) && j.length > 0) {
+        const candles: Candle[] = j.map((k: any[]) => ({
+          time: Math.floor(Number(k[0]) / 1000), // Binance returns ms, we want seconds
+          open: Number(k[1]),
+          high: Number(k[2]),
+          low: Number(k[3]),
+          close: Number(k[4]),
+          volume: Number(k[5]),
+        })).filter((c: Candle) => Number.isFinite(c.close) && c.close > 100);
+
+        if (candles.length > 0) {
+          // Update last known real price from latest close
+          const lastClose = candles.at(-1)!.close;
+          if (Number.isFinite(lastClose) && lastClose > 100) {
+            lastKnownRealPrice = lastClose;
+          }
+          klineCache.set(cacheKey, { data: candles, ts: Date.now() });
+          return candles;
+        }
+      }
+    }
+  } catch (e) {
+    // try next source
+  }
+
+  // === FALLBACK 1: MT5 Bridge (if configured) ===
   const bridgeConfig = getBridgeConfig();
   if (bridgeConfig) {
     try {
@@ -267,7 +359,7 @@ export async function fetchRealCandles(
     }
   }
 
-  // Yahoo Finance chart API
+  // === FALLBACK 2: Yahoo Finance chart API (GC=F gold futures) ===
   try {
     const yInterval = YAHOO_INTERVAL_MAP[interval] || "5m";
     const yRange = YAHOO_RANGE[interval] || "5d";
