@@ -44,7 +44,8 @@ import {
 import type { Candle } from "@/lib/indicators";
 import BacktestModal from "@/components/gold/backtest-modal";
 import MT5ConnectionManager from "@/components/gold/mt5-connection-manager";
-import { Server } from "lucide-react";
+import EAControlPanel from "@/components/gold/ea-control-panel";
+import { Server, Zap } from "lucide-react";
 
 // === EMA series helper (used for plotting EMA 50 / EMA 200 on chart) ===
 function computeEMASeriesHelper(values: number[], period: number): (number | null)[] {
@@ -204,6 +205,7 @@ export default function MT5Terminal() {
   const [backtestLoading, setBacktestLoading] = useState(false);
   const [showBacktestModal, setShowBacktestModal] = useState(false);
   const [showMT5Manager, setShowMT5Manager] = useState(false);
+  const [showEAPanel, setShowEAPanel] = useState(false);
   const [newsStatus, setNewsStatus] = useState<any>(null);
   const [newsEvents, setNewsEvents] = useState<any[]>([]);
   const [wyckoffResult, setWyckoffResult] = useState<any>(null);
@@ -851,6 +853,21 @@ export default function MT5Terminal() {
           />
         </button>
         <div className="w-px h-4 mx-1" style={{ background: COLORS.border }} />
+        {/* === Expert Advisor — Auto-Trading button === */}
+        <button
+          onClick={() => setShowEAPanel(true)}
+          className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-semibold transition hover:opacity-90"
+          style={{
+            background: `${COLORS.accent}20`,
+            color: COLORS.accent,
+            border: `1px solid ${COLORS.accent}40`,
+          }}
+          title="Expert Advisor — Automated Trading"
+        >
+          <Zap className="w-3 h-3" />
+          Expert Advisor
+        </button>
+        <div className="w-px h-4 mx-1" style={{ background: COLORS.border }} />
         <button className="p-1.5 hover:bg-[#3c3c3c] rounded" title="Refresh">
           <RefreshCw className="w-3.5 h-3.5" />
         </button>
@@ -1278,6 +1295,12 @@ export default function MT5Terminal() {
       <MT5ConnectionManager
         open={showMT5Manager}
         onClose={() => setShowMT5Manager(false)}
+      />
+
+      {/* === EXPERT ADVISOR CONTROL PANEL MODAL (Auto-Trading) === */}
+      <EAControlPanel
+        open={showEAPanel}
+        onClose={() => setShowEAPanel(false)}
       />
 
       {/* === STATUS BAR === */}
