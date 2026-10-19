@@ -651,12 +651,12 @@ export default function MT5Terminal() {
     prevCandlesRef.current = candles;
   }, [candles]);
 
-  // === Update last candle with live price (candle + EMA 200 last point — smooth real-time tick) ===
+  // === Update last candle with live price (candle + EMA 200 last point) ===
   useEffect(() => {
     if (!mainRef.current || !market || candles.length === 0) return;
     const last = candles[candles.length - 1];
     // The candle's high/low get extended if the live price exceeds them;
-    // the close is always the latest live price (smooth real-time movement).
+    // the close is always the latest live price (real, from upstream source).
     const updatedCandle = {
       time: last.time as any,
       open: last.open,

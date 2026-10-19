@@ -220,28 +220,10 @@ export async function fetchRealGoldTicker(): Promise<BinanceTicker> {
     // try next source
   }
 
-  // Last resort: synthetic around last known real price
-  const last = lastKnownRealPrice;
-  const spread = 0.3;
-  const ticker: BinanceTicker = {
-    price: last,
-    change: 0,
-    changePct: 0,
-    high: last,
-    low: last,
-    open: last,
-    prevClose: last,
-    bid: last - spread / 2,
-    ask: last + spread / 2,
-    volume: 0,
-    quoteVolume: 0,
-    weightedAvg: last,
-    count: 0,
-    timestamp: Date.now(),
-    source: "XAUUSD",
-  };
-  tickerCache = { data: ticker, ts: Date.now() };
-  return ticker;
+  // Last resort: return the last cached REAL ticker (NO fabrication, NO simulation).
+  // If we have no cached data at all, throw — better to show "no data" than fake prices.
+  if (tickerCache) return tickerCache.data;
+  throw new Error("All real gold price sources unavailable — no data");
 }
 
 /**
@@ -355,66 +337,19 @@ export async function fetchRealCandles(
     // try fallback
   }
 
-  // Fallback: synthetic candles around last known real price
-  const synth = generateSyntheticCandles(interval, limit);
-  klineCache.set(cacheKey, { data: synth, ts: Date.now() });
-  return synth;
+  // No real candles available — return cached if exists, otherwise empty array.
+  // NO synthetic candles — user wants 100% real data only.
+  if (cached) return cached.data;
+  return [];
 }
 
 /**
- * Generate synthetic candles around last known real price.
- * Uses random-walk with realistic gold volatility (~0.15% per candle on 5m).
- * Clearly labeled in source field via ticker.source = "XAUUSD".
+ * NOTE: Synthetic candle generation has been REMOVED.
+ * The platform now returns 100% REAL data only. If no real candles are
+ * available, fetchRealCandles returns an empty array (or last cached real
+ * candles) — but never fabricated/simulated data.
  */
-function generateSyntheticCandles(interval: KlineInterval, limit: number): Candle[] {
-  const secs = INTERVAL_SECONDS[interval];
-  const now = Math.floor(Date.now() / 1000);
-  const startTime = now - secs * limit;
 
-  // Volatility per candle (in %) — calibrated to gold
-  const volPerCandle = {
-    "1m": 0.0008,
-    "5m": 0.0015,
-    "15m": 0.0025,
-    "30m": 0.004,
-    "1h": 0.006,
-    "4h": 0.012,
-    "1d": 0.025,
-  }[interval] ?? 0.0015;
-
-  const candles: Candle[] = [];
-  let prevClose = lastKnownRealPrice;
-
-  for (let i = 0; i < limit; i++) {
-    const t = startTime + i * secs;
-    const open = prevClose;
-    // Random walk
-    const drift = (Math.random() - 0.5) * 2 * volPerCandle;
-    const close = open * (1 + drift);
-    const high = Math.max(open, close) * (1 + Math.random() * volPerCandle * 0.5);
-    const low = Math.min(open, close) * (1 - Math.random() * volPerCandle * 0.5);
-    const volume = Math.floor(100 + Math.random() * 1000);
-    candles.push({
-      time: t,
-      open,
-      high,
-      low,
-      close,
-      volume,
-    });
-    prevClose = close;
-  }
-
-  // Anchor last candle to last known real price
-  if (candles.length > 0 && lastKnownRealPrice > 100) {
-    const last = candles.at(-1)!;
-    last.close = lastKnownRealPrice;
-    last.high = Math.max(last.high, lastKnownRealPrice);
-    last.low = Math.min(last.low, lastKnownRealPrice);
-  }
-
-  return candles;
-}
 
 /**
  * Synthetic orderbook depth around spot price.

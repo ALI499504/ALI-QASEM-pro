@@ -1,8 +1,9 @@
 // Real-time gold price fetcher with multiple source fallbacks.
-// Primary: Yahoo Finance GC=F (real XAUUSD spot gold via COMEX futures)
+// Primary: Binance PAXG (real XAUUSD-pegged token)
 // Fallback 1: gold-api.com (real spot price)
 // Fallback 2: Yahoo Finance GC=F futures
-// Last resort: small intraday synthetic drift around last known real price
+// NO simulation, NO synthetic drift — 100% REAL data only.
+// If all sources fail, we throw an error rather than fabricate a price.
 
 import { fetchRealGoldTicker, type BinanceTicker } from "@/lib/binance-gold";
 
@@ -23,18 +24,16 @@ export interface GoldPrice {
   source: string;
 }
 
-const FALLBACK_PRICE = 2650; // sensible 2026 fallback (only used if ALL real sources fail)
-
 // In-memory cache for the latest price (server keeps it warm between requests)
 let cached: { data: GoldPrice; ts: number } | null = null;
 
 export async function fetchGoldPrice(): Promise<GoldPrice> {
-  // Return cache if fresh (< 1s old — high frequency for live charts)
-  if (cached && Date.now() - cached.ts < 1_000) {
+  // Return cache if fresh (< 500ms old — high frequency for live charts)
+  if (cached && Date.now() - cached.ts < 500) {
     return cached.data;
   }
 
-  // Try each source in order of preference
+  // Try each REAL source in order of preference
   const sources: Array<() => Promise<GoldPrice>> = [
     fromBinance,
     fromGoldApi,
@@ -53,13 +52,15 @@ export async function fetchGoldPrice(): Promise<GoldPrice> {
     }
   }
 
-  // Last resort: synthetic drift around last known real price
-  const synthetic = synthesizePrice();
-  cached = { data: synthetic, ts: Date.now() };
-  return synthetic;
+  // Last resort: return last cached REAL price (NO simulation, NO fake numbers)
+  if (cached) return cached.data;
+
+  // If we have NO data at all (first call + all sources failed), throw — better
+  // to show "no data" than to fabricate a price.
+  throw new Error("All real gold price sources unavailable — no data");
 }
 
-// PRIMARY: Yahoo GC=F — real XAUUSD spot via COMEX gold futures
+// PRIMARY: Binance PAXG (real XAUUSD-pegged token) — gives live bid/ask
 async function fromBinance(): Promise<GoldPrice> {
   const t: BinanceTicker = await fetchRealGoldTicker();
   return {
@@ -76,7 +77,7 @@ async function fromBinance(): Promise<GoldPrice> {
     currency: "USD",
     unit: "oz",
     timestamp: t.timestamp,
-    source: "XAUUSD",
+    source: "Binance PAXG (XAUUSD)",
   };
 }
 
@@ -109,14 +110,14 @@ async function fromGoldApi(): Promise<GoldPrice> {
       currency: "USD",
       unit: "oz",
       timestamp: Date.now(),
-      source: "XAUUSD",
+      source: "gold-api.com (XAU spot)",
     };
   } finally {
     clearTimeout(t);
   }
 }
 
-// FALLBACK 2: Yahoo Finance (gold futures GC=F)
+// FALLBACK 2: Yahoo Finance (gold futures GC=F) — real market data
 async function fromYahoo(): Promise<GoldPrice> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 4500);
@@ -147,34 +148,9 @@ async function fromYahoo(): Promise<GoldPrice> {
       currency: meta?.currency ?? "USD",
       unit: "oz",
       timestamp: Date.now(),
-      source: "yahoo-finance",
+      source: "Yahoo Finance (GC=F gold futures)",
     };
   } finally {
     clearTimeout(t);
   }
-}
-
-// LAST RESORT: synthetic intraday drift around last known real price
-// Only used if Binance, gold-api.com, AND Yahoo all fail.
-function synthesizePrice(): GoldPrice {
-  const base = cached?.data?.price ?? FALLBACK_PRICE;
-  const drift = (Math.sin(Date.now() / 37_000) + Math.random() - 0.5) * base * 0.0006;
-  const price = Math.round((base + drift) * 100) / 100;
-  const prev = cached?.data?.price ?? base * 0.9985;
-  const change = price - prev;
-  const changePct = (change / prev) * 100;
-
-  return {
-    price,
-    change,
-    changePct,
-    high: Math.max(price, prev) * 1.0018,
-    low: Math.min(price, prev) * 0.9982,
-    open: prev,
-    prevClose: prev,
-    currency: "USD",
-    unit: "oz",
-    timestamp: Date.now(),
-    source: "XAUUSD",
-  };
 }

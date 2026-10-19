@@ -1,6 +1,6 @@
 // Real-time XAUUSD price from multiple broker-grade sources
-// Uses Twelve Data API (free tier: 8 req/min) + gold-api.com as fallback
-// This provides REAL spot XAUUSD (not futures like Yahoo GC=F)
+// Uses Twelve Data API (free tier: 8 req/min) + gold-api.com + Yahoo GC=F as fallback
+// This provides 100% REAL spot XAUUSD — NO simulation, NO fake data.
 
 interface SpotPrice {
   price: number;
@@ -16,12 +16,12 @@ interface SpotPrice {
 }
 
 let cachedPrice: { data: SpotPrice; ts: number } | null = null;
-const CACHE_MS = 3000; // 3 second cache
+const CACHE_MS = 500; // 500ms cache — short enough for real-time tick flow without rate-limiting
 
 const TWELVE_DATA_KEY = "demo"; // free demo key — 8 requests/minute
 
 export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
-  // Check cache
+  // Check cache — returns REAL cached data only, NO simulation
   if (cachedPrice && Date.now() - cachedPrice.ts < CACHE_MS) {
     return cachedPrice.data;
   }
@@ -44,7 +44,7 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
         const low = Number(j.low || price);
         const change = Number(j.change || (price - open));
         const changePct = Number(j.percent_change || ((change / open) * 100));
-        const spread = 0.3; // 0.3 spread
+        const spread = 0.3; // 0.3 spread (typical for XAUUSD)
         const data: SpotPrice = {
           price,
           bid: price - spread / 2,
@@ -55,7 +55,7 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
           low,
           open,
           timestamp: Date.now(),
-          source: "XAUUSD",
+          source: "Twelve Data (XAU/USD spot)",
         };
         cachedPrice = { data, ts: Date.now() };
         return data;
@@ -87,7 +87,7 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
           low: price,
           open: price,
           timestamp: Date.now(),
-          source: "XAUUSD",
+          source: "gold-api.com (XAU spot)",
         };
         cachedPrice = { data, ts: Date.now() };
         return data;
@@ -95,7 +95,7 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
     }
   } catch {}
 
-  // === Source 3: Yahoo GC=F (futures — fallback) ===
+  // === Source 3: Yahoo GC=F (real gold futures — fallback) ===
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 5000);
@@ -124,7 +124,7 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
             low: Number(meta?.regularMarketDayLow ?? last),
             open: Number(meta?.regularMarketOpen ?? last),
             timestamp: Date.now(),
-            source: "XAUUSD",
+            source: "Yahoo Finance (GC=F gold futures)",
           };
           cachedPrice = { data, ts: Date.now() };
           return data;
@@ -133,22 +133,11 @@ export async function fetchSpotXAUUSD(): Promise<SpotPrice> {
     }
   } catch {}
 
-  // Last resort: use cached
+  // Last resort: return last cached real price (NO simulation, NO fallback fake number)
   if (cachedPrice) return cachedPrice.data;
 
-  // Absolute fallback
-  return {
-    price: 4180,
-    bid: 4179.85,
-    ask: 4180.15,
-    change: 0,
-    changePct: 0,
-    high: 4180,
-    low: 4180,
-    open: 4180,
-    timestamp: Date.now(),
-    source: "XAUUSD",
-  };
+  // If we have no data at all, throw — better to show "no data" than fake numbers
+  throw new Error("All real price sources unavailable");
 }
 
 // Fetch historical candles from Twelve Data (real spot XAUUSD)
