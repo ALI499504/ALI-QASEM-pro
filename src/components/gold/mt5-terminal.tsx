@@ -36,7 +36,6 @@ import {
 import {
   createChart,
   CandlestickSeries,
-  HistogramSeries,
   LineSeries,
   ColorType,
   CrosshairMode,
@@ -421,8 +420,10 @@ export default function MT5Terminal() {
     fetchNewsStatus();
     fetchWyckoff();
 
-    const marketInterval = setInterval(fetchMarket, 3000);
-    const candleInterval = setInterval(() => fetchCandles(timeframe), 10000); // refresh candles every 10s
+    // === Real-time price update — every 1 second for smooth tick movement ===
+    const marketInterval = setInterval(fetchMarket, 1000);
+    // Candles refresh — every 5 seconds (catches new candle formation faster)
+    const candleInterval = setInterval(() => fetchCandles(timeframe), 5000);
     const mt5Interval = setInterval(fetchMT5Data, 5000); // refresh account every 5s
     const agentInterval = setInterval(fetchAgentAlerts, 45000);
     const tvInterval = setInterval(fetchTVSignals, 10000);
@@ -567,7 +568,7 @@ export default function MT5Terminal() {
       },
       rightPriceScale: {
         borderColor: COLORS.border,
-        scaleMargins: { top: 0.08, bottom: 0.28 },
+        scaleMargins: { top: 0.05, bottom: 0.05 },
         entireTextOnly: true,
       },
       timeScale: {
@@ -579,18 +580,6 @@ export default function MT5Terminal() {
       },
     });
     chartRef.current = chart;
-
-    // === Volume histogram (bottom, colored by direction) — MT5 default ===
-    const volumeSeries = chart.addSeries(HistogramSeries, {
-      priceFormat: { type: "volume" },
-      priceScaleId: "vol",
-      lastValueVisible: false,
-      priceLineVisible: false,
-    });
-    chart.priceScale("vol").applyOptions({
-      scaleMargins: { top: 0.8, bottom: 0 },
-    });
-    (chartRef as any).volumeSeries = volumeSeries;
 
     // === EMA 50 (yellow) — MT5 default ===
     const ema50Series = chart.addSeries(LineSeries, {
@@ -643,7 +632,7 @@ export default function MT5Terminal() {
     };
   }, [candles.length > 0]);
 
-  // === Update chart data (candles + volume + EMA 50/200) ===
+  // === Update chart data (candles + EMA 50/200 — no volume) ===
   useEffect(() => {
     if (!mainRef.current || candles.length === 0) return;
     const data = candles.map((c) => ({
@@ -654,22 +643,6 @@ export default function MT5Terminal() {
       close: c.close,
     }));
     mainRef.current.setData(data);
-
-    // === Volume histogram — colored by direction ===
-    const volSeries = (chartRef as any).volumeSeries;
-    if (volSeries) {
-      const volData = candles
-        .filter((c) => Number.isFinite(c.volume) && c.volume > 0)
-        .map((c) => ({
-          time: c.time as any,
-          value: c.volume,
-          color:
-            c.close >= c.open
-              ? "rgba(34,197,94,0.45)"
-              : "rgba(239,68,68,0.45)",
-        }));
-      try { volSeries.setData(volData); } catch {}
-    }
 
     // === EMA 50 (yellow) ===
     const ema50Series = (chartRef as any).ema50Series;
@@ -700,10 +673,12 @@ export default function MT5Terminal() {
     prevCandlesRef.current = candles;
   }, [candles]);
 
-  // === Update last candle with live price (candle + volume + EMA last point) ===
+  // === Update last candle with live price (candle + EMA last point — smooth real-time tick) ===
   useEffect(() => {
     if (!mainRef.current || !market || candles.length === 0) return;
     const last = candles[candles.length - 1];
+    // The candle's high/low get extended if the live price exceeds them;
+    // the close is always the latest live price (smooth real-time movement).
     const updatedCandle = {
       time: last.time as any,
       open: last.open,
@@ -712,21 +687,6 @@ export default function MT5Terminal() {
       close: market.price,
     };
     try { mainRef.current.update(updatedCandle); } catch {}
-
-    // Update volume last bar
-    const volSeries = (chartRef as any).volumeSeries;
-    if (volSeries && last.volume > 0) {
-      try {
-        volSeries.update({
-          time: last.time as any,
-          value: last.volume,
-          color:
-            last.close >= last.open
-              ? "rgba(34,197,94,0.45)"
-              : "rgba(239,68,68,0.45)",
-        });
-      } catch {}
-    }
 
     // Update EMA 50 / EMA 200 last point with live price
     const closes = candles.map((c) => c.close);
