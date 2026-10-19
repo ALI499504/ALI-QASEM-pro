@@ -36,13 +36,35 @@ import {
 import {
   createChart,
   CandlestickSeries,
+  HistogramSeries,
+  LineSeries,
   ColorType,
   CrosshairMode,
   LineStyle,
 } from "lightweight-charts";
 import type { Candle } from "@/lib/indicators";
 import BacktestModal from "@/components/gold/backtest-modal";
-import MT5WebTrading from "@/components/gold/mt5-web-trading";
+
+// === EMA series helper (used for plotting EMA 50 / EMA 200 on chart) ===
+function computeEMASeriesHelper(values: number[], period: number): (number | null)[] {
+  const k = 2 / (period + 1);
+  const out: (number | null)[] = [];
+  let ema: number | null = null;
+  for (let i = 0; i < values.length; i++) {
+    if (i < period - 1) {
+      out.push(null);
+      continue;
+    }
+    if (ema === null) {
+      const slice = values.slice(0, period);
+      ema = slice.reduce((a, b) => a + b, 0) / period;
+    } else {
+      ema = values[i] * k + ema * (1 - k);
+    }
+    out.push(ema);
+  }
+  return out;
+}
 
 // === Prevent tree-shaking of Loader2 (needed by old cached chunks) ===
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -173,7 +195,7 @@ export default function MT5Terminal() {
   const [history, setHistory] = useState<any[]>([]);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("connecting");
-  const [chartSource, setChartSource] = useState<"mt5" | "tradingview" | "mt5web">("mt5web"); // default to MT5 Web
+  const [chartSource, setChartSource] = useState<"mt5" | "tradingview">("mt5"); // default to original MT5 chart
   const [tvSignals, setTVSignals] = useState<any[]>([]);
   const [tvDecisions, setTVDecisions] = useState<any[]>([]);
   // === Backtest state ===
@@ -522,34 +544,86 @@ export default function MT5Terminal() {
         textColor: COLORS.textMuted,
         fontFamily: "'Segoe UI', Tahoma, sans-serif",
         fontSize: 11,
+        attributionLogo: false,
       },
       grid: {
-        vertLines: { color: "rgba(255,255,255,0.03)" },
-        horzLines: { color: "rgba(255,255,255,0.03)" },
+        vertLines: { color: "rgba(255,255,255,0.035)" },
+        horzLines: { color: "rgba(255,255,255,0.035)" },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
-        vertLine: { color: "rgba(255,255,255,0.3)", labelBackgroundColor: COLORS.accent },
-        horzLine: { color: "rgba(255,255,255,0.3)", labelBackgroundColor: COLORS.accent },
+        vertLine: {
+          color: "rgba(255,255,255,0.4)",
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: COLORS.accent,
+        },
+        horzLine: {
+          color: "rgba(255,255,255,0.4)",
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: COLORS.accent,
+        },
       },
       rightPriceScale: {
         borderColor: COLORS.border,
-        scaleMargins: { top: 0.05, bottom: 0.05 },
+        scaleMargins: { top: 0.08, bottom: 0.28 },
+        entireTextOnly: true,
       },
       timeScale: {
         borderColor: COLORS.border,
         timeVisible: true,
         secondsVisible: false,
+        rightOffset: 5,
+        barSpacing: 9,
       },
     });
     chartRef.current = chart;
+
+    // === Volume histogram (bottom, colored by direction) — MT5 default ===
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: "volume" },
+      priceScaleId: "vol",
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
+    chart.priceScale("vol").applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
+    (chartRef as any).volumeSeries = volumeSeries;
+
+    // === EMA 50 (yellow) — MT5 default ===
+    const ema50Series = chart.addSeries(LineSeries, {
+      color: "#facc15",
+      lineWidth: 1,
+      lineStyle: LineStyle.Solid,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+    (chartRef as any).ema50Series = ema50Series;
+
+    // === EMA 200 (blue) — MT5 default ===
+    const ema200Series = chart.addSeries(LineSeries, {
+      color: "#3b82f6",
+      lineWidth: 1,
+      lineStyle: LineStyle.Solid,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+    (chartRef as any).ema200Series = ema200Series;
+
+    // === Main candlestick series (last so it's on top) ===
     mainRef.current = chart.addSeries(CandlestickSeries, {
       upColor: COLORS.up,
       downColor: COLORS.down,
-      wickUpColor: COLORS.up,
-      wickDownColor: COLORS.down,
-      borderVisible: false,
-      priceFormat: { type: "price", precision: 2, minMove: 0.01 },
+      borderUpColor: COLORS.up,
+      borderDownColor: COLORS.down,
+      wickUpColor: "rgba(34,197,94,0.85)",
+      wickDownColor: "rgba(239,68,68,0.85)",
+      priceLineStyle: LineStyle.Dashed,
+      lastValueVisible: true,
     });
 
     const ro = new ResizeObserver(() => {
@@ -569,7 +643,7 @@ export default function MT5Terminal() {
     };
   }, [candles.length > 0]);
 
-  // === Update chart data ===
+  // === Update chart data (candles + volume + EMA 50/200) ===
   useEffect(() => {
     if (!mainRef.current || candles.length === 0) return;
     const data = candles.map((c) => ({
@@ -580,6 +654,45 @@ export default function MT5Terminal() {
       close: c.close,
     }));
     mainRef.current.setData(data);
+
+    // === Volume histogram — colored by direction ===
+    const volSeries = (chartRef as any).volumeSeries;
+    if (volSeries) {
+      const volData = candles
+        .filter((c) => Number.isFinite(c.volume) && c.volume > 0)
+        .map((c) => ({
+          time: c.time as any,
+          value: c.volume,
+          color:
+            c.close >= c.open
+              ? "rgba(34,197,94,0.45)"
+              : "rgba(239,68,68,0.45)",
+        }));
+      try { volSeries.setData(volData); } catch {}
+    }
+
+    // === EMA 50 (yellow) ===
+    const ema50Series = (chartRef as any).ema50Series;
+    if (ema50Series) {
+      const closes = candles.map((c) => c.close);
+      const ema50 = computeEMASeriesHelper(closes, 50);
+      const ema50Data = candles
+        .map((c, i) => ({ time: c.time as any, value: ema50[i] }))
+        .filter((d) => d.value !== null);
+      try { ema50Series.setData(ema50Data); } catch {}
+    }
+
+    // === EMA 200 (blue) ===
+    const ema200Series = (chartRef as any).ema200Series;
+    if (ema200Series) {
+      const closes = candles.map((c) => c.close);
+      const ema200 = computeEMASeriesHelper(closes, 200);
+      const ema200Data = candles
+        .map((c, i) => ({ time: c.time as any, value: ema200[i] }))
+        .filter((d) => d.value !== null);
+      try { ema200Series.setData(ema200Data); } catch {}
+    }
+
     chartRef.current?.timeScale().setVisibleLogicalRange({
       from: Math.max(0, candles.length - 80),
       to: candles.length + 2,
@@ -587,7 +700,7 @@ export default function MT5Terminal() {
     prevCandlesRef.current = candles;
   }, [candles]);
 
-  // === Update last candle with live price ===
+  // === Update last candle with live price (candle + volume + EMA last point) ===
   useEffect(() => {
     if (!mainRef.current || !market || candles.length === 0) return;
     const last = candles[candles.length - 1];
@@ -599,6 +712,45 @@ export default function MT5Terminal() {
       close: market.price,
     };
     try { mainRef.current.update(updatedCandle); } catch {}
+
+    // Update volume last bar
+    const volSeries = (chartRef as any).volumeSeries;
+    if (volSeries && last.volume > 0) {
+      try {
+        volSeries.update({
+          time: last.time as any,
+          value: last.volume,
+          color:
+            last.close >= last.open
+              ? "rgba(34,197,94,0.45)"
+              : "rgba(239,68,68,0.45)",
+        });
+      } catch {}
+    }
+
+    // Update EMA 50 / EMA 200 last point with live price
+    const closes = candles.map((c) => c.close);
+    closes[closes.length - 1] = market.price;
+    const ema50Series = (chartRef as any).ema50Series;
+    if (ema50Series) {
+      const ema50 = computeEMASeriesHelper(closes, 50);
+      const lastEMA = ema50[ema50.length - 1];
+      if (lastEMA !== null && Number.isFinite(lastEMA)) {
+        try {
+          ema50Series.update({ time: last.time as any, value: lastEMA });
+        } catch {}
+      }
+    }
+    const ema200Series = (chartRef as any).ema200Series;
+    if (ema200Series) {
+      const ema200 = computeEMASeriesHelper(closes, 200);
+      const lastEMA = ema200[ema200.length - 1];
+      if (lastEMA !== null && Number.isFinite(lastEMA)) {
+        try {
+          ema200Series.update({ time: last.time as any, value: lastEMA });
+        } catch {}
+      }
+    }
   }, [market?.price, candles]);
 
   // === Bid/Ask price lines on chart ===
@@ -798,7 +950,7 @@ export default function MT5Terminal() {
           <span>Bar mode: Candlesticks</span>
           <span>•</span>
           <span>Scale: Auto</span>
-          {/* === Chart Source Switcher: MT5 / TradingView / MT5 Web === */}
+          {/* === Chart Source Switcher: MT5 / TradingView === */}
           <div className="flex items-center gap-0.5 ml-2 p-0.5 rounded" style={{ background: COLORS.panelHeader }}>
             <button
               onClick={() => setChartSource("mt5")}
@@ -807,20 +959,9 @@ export default function MT5Terminal() {
                 background: chartSource === "mt5" ? COLORS.accent : "transparent",
                 color: chartSource === "mt5" ? "#fff" : COLORS.textMuted,
               }}
-              title="Use M.ROBOT native chart"
+              title="MetaTrader 5 — original chart (candlesticks + indicators + bid/ask)"
             >
               MT5
-            </button>
-            <button
-              onClick={() => setChartSource("mt5web")}
-              className="px-2 py-0.5 rounded text-[10px] font-semibold transition"
-              style={{
-                background: chartSource === "mt5web" ? COLORS.accent : "transparent",
-                color: chartSource === "mt5web" ? "#fff" : COLORS.textMuted,
-              }}
-              title="MT5 Web — pre-authenticated demo account ($1000 / 1:500). Click to trade directly, NO LOGIN required."
-            >
-              MT5 Web
             </button>
             <button
               onClick={() => setChartSource("tradingview")}
@@ -937,18 +1078,7 @@ export default function MT5Terminal() {
 
         {/* === CENTER: Chart === */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {chartSource === "mt5web" ? (
-            /* === M.ROBOT MT5 Web Trading — PRE-AUTHENTICATED (no login screen) ===
-               This is a faithful MT5 chart replica using lightweight-charts.
-               The chart is just the chart itself — the surrounding panels
-               (Market Watch, Navigator, Toolbox, Status Bar) are provided
-               by the parent MT5Terminal component for the full MT5 look.
-               `timeframe` is synced from the parent's timeframe state so the
-               user can change timeframes via the parent's M1/M5/M15/... bar. */
-            <div className="relative flex-1 min-h-0" style={{ background: "#0e0e0e" }}>
-              <MT5WebTrading timeframe={timeframe} />
-            </div>
-          ) : chartSource === "tradingview" ? (
+          {chartSource === "tradingview" ? (
             /* === TradingView Advanced Chart Widget === */
             <div className="relative flex-1" style={{ background: COLORS.chartBg }}>
               <iframe
@@ -959,7 +1089,7 @@ export default function MT5Terminal() {
               />
             </div>
           ) : (
-            /* === Native M.ROBOT Chart === */
+            /* === Native M.ROBOT Chart (original MT5-style chart) === */
             <div className="relative flex-1" ref={containerRef} style={{ background: COLORS.chartBg }}>
               {/* === DEMO MODE badge (prominent) === */}
               {demoMode && (
