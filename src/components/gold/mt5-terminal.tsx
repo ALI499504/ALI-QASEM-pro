@@ -939,13 +939,14 @@ export default function MT5Terminal() {
         <div className="flex flex-col flex-1 overflow-hidden">
           {chartSource === "mt5web" ? (
             /* === M.ROBOT MT5 Web Trading — PRE-AUTHENTICATED (no login screen) ===
-               Instead of using MetaQuotes' trade.mql5.com iframe (which
-               forces a login screen for security), we render our own
-               pre-authenticated trading interface that's already logged
-               in to a demo account (50123456 / M.ROBOT-Demo / $1000 /
-               1:500). User clicks "MT5 Web" → goes DIRECTLY to trading. */
-            <div className="relative flex-1" style={{ background: "#0e0e0e" }}>
-              <MT5WebTrading />
+               This is a faithful MT5 chart replica using lightweight-charts.
+               The chart is just the chart itself — the surrounding panels
+               (Market Watch, Navigator, Toolbox, Status Bar) are provided
+               by the parent MT5Terminal component for the full MT5 look.
+               `timeframe` is synced from the parent's timeframe state so the
+               user can change timeframes via the parent's M1/M5/M15/... bar. */
+            <div className="relative flex-1 min-h-0" style={{ background: "#0e0e0e" }}>
+              <MT5WebTrading timeframe={timeframe} />
             </div>
           ) : chartSource === "tradingview" ? (
             /* === TradingView Advanced Chart Widget === */
