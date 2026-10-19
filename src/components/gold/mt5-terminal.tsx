@@ -581,18 +581,7 @@ export default function MT5Terminal() {
     });
     chartRef.current = chart;
 
-    // === EMA 50 (yellow) — MT5 default ===
-    const ema50Series = chart.addSeries(LineSeries, {
-      color: "#facc15",
-      lineWidth: 1,
-      lineStyle: LineStyle.Solid,
-      priceLineVisible: false,
-      lastValueVisible: false,
-      crosshairMarkerVisible: false,
-    });
-    (chartRef as any).ema50Series = ema50Series;
-
-    // === EMA 200 (blue) — MT5 default ===
+    // === EMA 200 (blue) — MT5 default trend indicator ===
     const ema200Series = chart.addSeries(LineSeries, {
       color: "#3b82f6",
       lineWidth: 1,
@@ -632,7 +621,7 @@ export default function MT5Terminal() {
     };
   }, [candles.length > 0]);
 
-  // === Update chart data (candles + EMA 50/200 — no volume) ===
+  // === Update chart data (candles + EMA 200 — no EMA 50, no volume) ===
   useEffect(() => {
     if (!mainRef.current || candles.length === 0) return;
     const data = candles.map((c) => ({
@@ -643,17 +632,6 @@ export default function MT5Terminal() {
       close: c.close,
     }));
     mainRef.current.setData(data);
-
-    // === EMA 50 (yellow) ===
-    const ema50Series = (chartRef as any).ema50Series;
-    if (ema50Series) {
-      const closes = candles.map((c) => c.close);
-      const ema50 = computeEMASeriesHelper(closes, 50);
-      const ema50Data = candles
-        .map((c, i) => ({ time: c.time as any, value: ema50[i] }))
-        .filter((d) => d.value !== null);
-      try { ema50Series.setData(ema50Data); } catch {}
-    }
 
     // === EMA 200 (blue) ===
     const ema200Series = (chartRef as any).ema200Series;
@@ -673,7 +651,7 @@ export default function MT5Terminal() {
     prevCandlesRef.current = candles;
   }, [candles]);
 
-  // === Update last candle with live price (candle + EMA last point — smooth real-time tick) ===
+  // === Update last candle with live price (candle + EMA 200 last point — smooth real-time tick) ===
   useEffect(() => {
     if (!mainRef.current || !market || candles.length === 0) return;
     const last = candles[candles.length - 1];
@@ -688,19 +666,9 @@ export default function MT5Terminal() {
     };
     try { mainRef.current.update(updatedCandle); } catch {}
 
-    // Update EMA 50 / EMA 200 last point with live price
+    // Update EMA 200 last point with live price
     const closes = candles.map((c) => c.close);
     closes[closes.length - 1] = market.price;
-    const ema50Series = (chartRef as any).ema50Series;
-    if (ema50Series) {
-      const ema50 = computeEMASeriesHelper(closes, 50);
-      const lastEMA = ema50[ema50.length - 1];
-      if (lastEMA !== null && Number.isFinite(lastEMA)) {
-        try {
-          ema50Series.update({ time: last.time as any, value: lastEMA });
-        } catch {}
-      }
-    }
     const ema200Series = (chartRef as any).ema200Series;
     if (ema200Series) {
       const ema200 = computeEMASeriesHelper(closes, 200);
