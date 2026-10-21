@@ -20,11 +20,11 @@ const jetMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "M.ROBOT | AI Gold Trading Bot 2026",
+  title: "XAU-60 MT5 Trading Bot Pro | MT5 Trading Bot Pro v2.0",
   description:
     "منصة تداول الذهب بالذكاء الاصطناعي — تحليل لحظي لزوج (XAUUSD) مع إشارات مؤكدة، مؤشرات فنية متقدمة، ولوحة تحكم احترافية لعام 2026.",
   keywords: [
-    "M.ROBOT",
+    "XAU-60 MT5 Trading Bot Pro",
     "تداول الذهب",
     "روبوت تداول",
     "ذكاء اصطناعي",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     "تحليل فني",
     "إشارات تداول",
   ],
-  authors: [{ name: "M.ROBOT" }],
+  authors: [{ name: "XAU-60 MT5 Trading Bot Pro" }],
   manifest: "/manifest.json",
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
@@ -41,10 +41,10 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "M.ROBOT",
+    title: "XAU-60 MT5 Trading Bot Pro",
   },
   openGraph: {
-    title: "M.ROBOT 2026",
+    title: "XAU-60 MT5 Trading Bot Pro 2026",
     description: "تداول الذهب بالذكاء الاصطناعي — إشارات مؤكدة لحظية",
     type: "website",
     images: ["https://z-cdn.chatglm.cn/z-ai/static/logo.svg"],

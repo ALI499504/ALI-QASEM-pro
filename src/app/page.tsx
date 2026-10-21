@@ -1,50 +1,23 @@
 "use client";
-
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import ErrorBoundary from "@/components/gold/terminal-error-boundary";
 
-const MT5Terminal = dynamic(() => import("@/components/gold/mt5-terminal"), {
+const XAU60Terminal = dynamic(() => import("@/components/gold/xau60-terminal"), {
   ssr: false,
   loading: () => (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "100vh",
-      background: "#1e1e1e",
-      color: "#888",
-      fontFamily: "Segoe UI, sans-serif",
-      fontSize: 13,
-    }}>
-      Loading M.ROBOT MT5 Terminal...
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#0a0e14",color:"#22c55e",fontFamily:"Segoe UI,sans-serif",fontSize:14}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:28,fontWeight:800,marginBottom:8}}>XAU-60 MT5 Trading Bot Pro</div>
+        <div style={{color:"#6b7280"}}>Loading Streamlit dashboard...</div>
+      </div>
     </div>
   ),
 });
 
 export default function Home() {
-  useEffect(() => {
-    // === Unregister any old service workers to clear cached JS ===
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((reg) => {
-          reg.unregister().then(() => {
-            console.log("Old service worker unregistered");
-          });
-        });
-      });
-      // Also clear all caches
-      if ("caches" in window) {
-        caches.keys().then((names) => {
-          names.forEach((name) => caches.delete(name));
-        });
-      }
-    }
-  }, []);
-
   return (
-    <ErrorBoundary name="MT5Terminal">
-      <MT5Terminal />
-    </ErrorBoundary>
+    <main>
+      <XAU60Terminal />
+    </main>
   );
 }
