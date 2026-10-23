@@ -1,18 +1,15 @@
 /**
- * BFX AI — MetaApi Cloud Proxy v4.0
+ * BFX AI — MetaApi Cloud Proxy v5.0
  * 
- * IMPORTANT FIX: The actual MetaApi SDK uses domain
- *   https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai
- * NOT https://api.metaapi.cloud (which returns 404 nginx for all paths).
+ * ANOTHER BREAKTHROUGH: MetaApi uses 'auth-token' header (NOT 'Authorization: Bearer')
  * 
- * This was discovered by reading the SDK source:
- *   node_modules/metaapi.cloud-sdk/lib/clients/domain.client.ts:
- *     domain default = 'agiliumtrade.agiliumtrade.ai'
- *   node_modules/metaapi.cloud-sdk/lib/clients/metaApi.client.ts:
- *     this._host = `https://mt-provisioning-api-v1.${domainClient.domain}`
+ * Error was: "Authorization failed because no auth-token header provided"
  * 
- * So the real API base URL is:
- *   https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai
+ * So the correct header to send is:
+ *   auth-token: <jwt_token>
+ * 
+ * NOT the standard:
+ *   Authorization: Bearer <jwt_token>
  */
 
 const express = require("express");
@@ -34,8 +31,9 @@ app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     service: "bfx-mt5-proxy",
-    version: "4.0.0",
+    version: "5.0.0",
     metaapiBaseUrl: METAAPI_BASE_URL,
+    authHeaderName: "auth-token",
     metaapiTokenConfigured: !!METAAPI_TOKEN,
     nodeTlsSetting: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
     timestamp: new Date().toISOString(),
@@ -63,7 +61,7 @@ app.get("/raw-test", async (req, res) => {
   try {
     const r = await fetch(upstreamUrl, {
       headers: {
-        Authorization: "Bearer " + METAAPI_TOKEN,
+        "auth-token": METAAPI_TOKEN,  // ← THE FIX! 'auth-token' not 'Authorization'
         "Content-Type": "application/json",
         Accept: "application/json",
         "User-Agent": "MetaApi-JavaScript-SDK/19.7.0",
@@ -97,8 +95,9 @@ app.use(async (req, res) => {
   const queryString = req.url.includes("?") ? "?" + req.url.split("?")[1] : "";
   const upstreamUrl = METAAPI_BASE_URL + path + queryString;
 
+  // THE FIX: MetaApi uses 'auth-token' header, not 'Authorization: Bearer'
   const upstreamHeaders = {
-    Authorization: "Bearer " + METAAPI_TOKEN,
+    "auth-token": METAAPI_TOKEN,
     "Content-Type": req.get("Content-Type") || "application/json",
     Accept: "application/json",
     "User-Agent": "MetaApi-JavaScript-SDK/19.7.0",
@@ -128,7 +127,7 @@ app.use(async (req, res) => {
         respHeaders[key] = value;
       }
     });
-    respHeaders["X-BFX-Proxy"] = "render-node-v4.0";
+    respHeaders["X-BFX-Proxy"] = "render-node-v5.0";
     respHeaders["X-BFX-Upstream-Status"] = String(upstream.status);
     respHeaders["X-BFX-Upstream-URL"] = upstreamUrl;
 
@@ -141,8 +140,9 @@ app.use(async (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`BFX MT5 Proxy v4.0 listening on port ${PORT}`);
+  console.log(`BFX MT5 Proxy v5.0 listening on port ${PORT}`);
   console.log(`  Upstream: ${METAAPI_BASE_URL}`);
+  console.log(`  Auth header: auth-token`);
   console.log(`  Token: ${METAAPI_TOKEN ? "OK" : "MISSING"}`);
   console.log(`  TLS reject: ${process.env.NODE_TLS_REJECT_UNAUTHORIZED}`);
 });
