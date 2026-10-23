@@ -1,6 +1,18 @@
 /**
- * BFX AI — MetaApi Cloud Proxy v3.0
- * Now tries multiple Host headers + User-Agents to find what works
+ * BFX AI — MetaApi Cloud Proxy v4.0
+ * 
+ * IMPORTANT FIX: The actual MetaApi SDK uses domain
+ *   https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai
+ * NOT https://api.metaapi.cloud (which returns 404 nginx for all paths).
+ * 
+ * This was discovered by reading the SDK source:
+ *   node_modules/metaapi.cloud-sdk/lib/clients/domain.client.ts:
+ *     domain default = 'agiliumtrade.agiliumtrade.ai'
+ *   node_modules/metaapi.cloud-sdk/lib/clients/metaApi.client.ts:
+ *     this._host = `https://mt-provisioning-api-v1.${domainClient.domain}`
+ * 
+ * So the real API base URL is:
+ *   https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai
  */
 
 const express = require("express");
@@ -11,103 +23,65 @@ const PORT = process.env.PORT || 10000;
 const METAAPI_TOKEN = process.env.METAAPI_TOKEN;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 
+// === REAL MetaApi Cloud API base URL (from SDK source) ===
+const METAAPI_BASE_URL = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai";
+
 app.use(cors({ origin: ALLOWED_ORIGIN === "*" ? true : ALLOWED_ORIGIN.split(",") }));
 app.use(express.raw({ type: "*/*", limit: "10mb" }));
 
+// Health check
 app.get("/health", (req, res) => {
   res.json({
-    status: "ok", service: "bfx-mt5-proxy", version: "3.0.0",
+    status: "ok",
+    service: "bfx-mt5-proxy",
+    version: "4.0.0",
+    metaapiBaseUrl: METAAPI_BASE_URL,
     metaapiTokenConfigured: !!METAAPI_TOKEN,
     nodeTlsSetting: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
     timestamp: new Date().toISOString(),
   });
 });
 
-// Comprehensive raw-test endpoint that tries multiple approaches
+// Debug endpoint
+app.get("/debug", (req, res) => {
+  const path = req.query.path || "/users/current/accounts";
+  const upstreamUrl = METAAPI_BASE_URL + (path.startsWith("/") ? path : "/" + path);
+  res.json({
+    requestPath: path,
+    upstreamUrl,
+    tokenConfigured: !!METAAPI_TOKEN,
+    tokenPreview: METAAPI_TOKEN ? METAAPI_TOKEN.slice(0, 50) + "..." : null,
+    nodeVersion: process.version,
+  });
+});
+
+// Raw test endpoint - tries fetching and shows full response
 app.get("/raw-test", async (req, res) => {
   const path = req.query.path || "/users/current/accounts";
-  const upstreamUrl = "https://api.metaapi.cloud" + (path.startsWith("/") ? path : "/" + path);
+  const upstreamUrl = METAAPI_BASE_URL + (path.startsWith("/") ? path : "/" + path);
   
-  const tests = {};
-  
-  // Test 1: Default fetch (no special headers)
-  try {
-    const r = await fetch(upstreamUrl, {
-      headers: { Authorization: "Bearer " + METAAPI_TOKEN, "Content-Type": "application/json" }
-    });
-    const body = await r.text();
-    tests["default"] = {
-      status: r.status, headers: Object.fromEntries(r.headers),
-      bodyPreview: body.slice(0, 300),
-    };
-  } catch (e) { tests["default"] = { error: e.message }; }
-  
-  // Test 2: With explicit Host header
   try {
     const r = await fetch(upstreamUrl, {
       headers: {
         Authorization: "Bearer " + METAAPI_TOKEN,
-        Host: "api.metaapi.cloud",
         "Content-Type": "application/json",
         Accept: "application/json",
+        "User-Agent": "MetaApi-JavaScript-SDK/19.7.0",
       }
     });
     const body = await r.text();
-    tests["with-host"] = {
-      status: r.status, bodyPreview: body.slice(0, 300),
-    };
-  } catch (e) { tests["with-host"] = { error: e.message }; }
-  
-  // Test 3: With SDK User-Agent
-  try {
-    const r = await fetch(upstreamUrl, {
-      headers: {
-        Authorization: "Bearer " + METAAPI_TOKEN,
-        "Content-Type": "application/json",
-        Accept: "application/json, text/plain, */*",
-        "User-Agent": "axios/1.7.2",
-      }
+    res.json({
+      upstreamUrl,
+      status: r.status,
+      statusText: r.statusText,
+      ok: r.ok,
+      bodyPreview: body.slice(0, 1500),
+      bodyLength: body.length,
+      headers: Object.fromEntries(r.headers),
     });
-    const body = await r.text();
-    tests["axios-ua"] = {
-      status: r.status, bodyPreview: body.slice(0, 300),
-    };
-  } catch (e) { tests["axios-ua"] = { error: e.message }; }
-  
-  // Test 4: Try without TLS verification (if NODE_TLS_REJECT_UNAUTHORIZED is set)
-  try {
-    const r = await fetch(upstreamUrl, {
-      headers: { Authorization: "Bearer " + METAAPI_TOKEN, "Content-Type": "application/json" },
-      // Try fetch with node-specific options
-      dispatcher: undefined,
-    });
-    const body = await r.text();
-    tests["dispatcher-undefined"] = {
-      status: r.status, bodyPreview: body.slice(0, 300),
-    };
-  } catch (e) { tests["dispatcher-undefined"] = { error: e.message }; }
-  
-  // Test 5: Try fetching app.metaapi.cloud (which we KNOW works) to verify Worker
-  try {
-    const r = await fetch("https://app.metaapi.cloud");
-    const body = await r.text();
-    tests["app-metaapi-works"] = {
-      status: r.status, bodyPreview: body.slice(0, 200),
-    };
-  } catch (e) { tests["app-metaapi-works"] = { error: e.message }; }
-  
-  // Test 6: Try fetching api-v1.metaapi.cloud (different subdomain)
-  try {
-    const r = await fetch("https://api-v1.metaapi.cloud" + (path.startsWith("/") ? path : "/" + path), {
-      headers: { Authorization: "Bearer " + METAAPI_TOKEN, "Content-Type": "application/json" }
-    });
-    const body = await r.text();
-    tests["api-v1-subdomain"] = {
-      status: r.status, bodyPreview: body.slice(0, 300),
-    };
-  } catch (e) { tests["api-v1-subdomain"] = { error: e.message }; }
-  
-  res.json({ upstreamUrl, tests });
+  } catch (err) {
+    res.json({ error: err.message, name: err.name, upstreamUrl });
+  }
 });
 
 // Main proxy handler
@@ -121,13 +95,13 @@ app.use(async (req, res) => {
   let path = req.path;
   if (!path.startsWith("/")) path = "/" + path;
   const queryString = req.url.includes("?") ? "?" + req.url.split("?")[1] : "";
-  const upstreamUrl = "https://api.metaapi.cloud" + path + queryString;
+  const upstreamUrl = METAAPI_BASE_URL + path + queryString;
 
   const upstreamHeaders = {
     Authorization: "Bearer " + METAAPI_TOKEN,
     "Content-Type": req.get("Content-Type") || "application/json",
-    Accept: "application/json, text/plain, */*",
-    "User-Agent": "axios/1.7.2",
+    Accept: "application/json",
+    "User-Agent": "MetaApi-JavaScript-SDK/19.7.0",
   };
 
   let body = null;
@@ -154,18 +128,21 @@ app.use(async (req, res) => {
         respHeaders[key] = value;
       }
     });
-    respHeaders["X-BFX-Proxy"] = "render-node-v3.0";
+    respHeaders["X-BFX-Proxy"] = "render-node-v4.0";
     respHeaders["X-BFX-Upstream-Status"] = String(upstream.status);
+    respHeaders["X-BFX-Upstream-URL"] = upstreamUrl;
 
     const respBody = await upstream.text();
     res.status(upstream.status).set(respHeaders).send(respBody);
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] Proxy error ${req.method} ${path}:`, err.message);
     res.status(502).json({ error: "Proxy fetch failed", detail: err.message, upstreamUrl });
   }
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`BFX MT5 Proxy v3.0 listening on port ${PORT}`);
+  console.log(`BFX MT5 Proxy v4.0 listening on port ${PORT}`);
+  console.log(`  Upstream: ${METAAPI_BASE_URL}`);
   console.log(`  Token: ${METAAPI_TOKEN ? "OK" : "MISSING"}`);
   console.log(`  TLS reject: ${process.env.NODE_TLS_REJECT_UNAUTHORIZED}`);
 });
