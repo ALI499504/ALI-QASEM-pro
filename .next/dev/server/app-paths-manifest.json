@@ -1,3 +1,4 @@
 {
-  "/api/mt5/account/route": "app/api/mt5/account/route.js"
+  "/api/mt5/account/route": "app/api/mt5/account/route.js",
+  "/api/mt5/status/route": "app/api/mt5/status/route.js"
 }

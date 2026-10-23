@@ -966,8 +966,29 @@ const MT5_PASSWORD = process.env.MT5_PASSWORD || ""; // user must set env var
 let cachedAccountId = null;
 let connectionCheckTs = 0;
 let connectionAvailable = null;
-const METAAPI_BASE = "https://api.metaapi.cloud";
-const METAAPI_TIMEOUT_MS = 8000;
+// ============================================================================
+// MetaApi base URL — supports TWO modes:
+//
+//   Mode 1 (default, fallback): direct connection to api.metaapi.cloud.
+//     This was the old documentation URL but it returns 404 nginx for all paths
+//     because MetaApi renamed their API to mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai
+//
+//   Mode 2 (production-recommended): route through our Render.com Node.js proxy.
+//     Set METAAPI_PROXY_URL env var to your Render URL, e.g.:
+//       METAAPI_PROXY_URL=https://bfx-mt5-proxy.onrender.com
+//     The Render proxy forwards to the REAL MetaApi base URL
+//     (mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai) and injects the
+//     auth-token header. Bypasses SSL verification issues on Cloudflare Workers.
+//     Setup: see /home/z/my-project/render-proxy/server.js (v5.0+)
+// ============================================================================
+const METAAPI_BASE = process.env.METAAPI_PROXY_URL || "https://bfx-mt5-proxy.onrender.com";
+// Strip trailing slash for clean path joining
+const METAAPI_BASE_CLEAN = METAAPI_BASE.replace(/\/$/, "");
+// When using the Render proxy, the auth-token header is injected BY THE PROXY
+// (stored as Render env var METAAPI_TOKEN). When calling MetaApi directly,
+// we attach the auth-token header ourselves here.
+const USE_PROXY = METAAPI_BASE !== "https://api.metaapi.cloud";
+const METAAPI_TIMEOUT_MS = USE_PROXY ? 15000 : 8000;
 async function checkMetaApiReachable() {
     const now = Date.now();
     if (now - connectionCheckTs < 30_000 && connectionAvailable !== null) {
@@ -977,12 +998,18 @@ async function checkMetaApiReachable() {
     try {
         const controller = new AbortController();
         const t = setTimeout(()=>controller.abort(), METAAPI_TIMEOUT_MS);
-        const r = await fetch(`${METAAPI_BASE}/users/current/accounts`, {
+        // When using the proxy, the Worker injects the Authorization header,
+        // so we DON'T attach it here. When calling api.metaapi.cloud directly,
+        // we attach the token ourselves.
+        const headers = {
+            "Content-Type": "application/json"
+        };
+        if (!USE_PROXY) {
+            headers["Authorization"] = `Bearer ${METAAPI_TOKEN}`;
+        }
+        const r = await fetch(`${METAAPI_BASE_CLEAN}/users/current/accounts`, {
             method: "GET",
-            headers: {
-                Authorization: `Bearer ${METAAPI_TOKEN}`,
-                "Content-Type": "application/json"
-            },
+            headers,
             signal: controller.signal
         });
         clearTimeout(t);
@@ -999,13 +1026,18 @@ async function metaApiFetch(path, init = {}) {
     const controller = new AbortController();
     const t = setTimeout(()=>controller.abort(), METAAPI_TIMEOUT_MS);
     try {
-        const r = await fetch(`${METAAPI_BASE}${path}`, {
+        // Build headers — only attach Authorization when calling api.metaapi.cloud
+        // directly (when using the Worker proxy, the Worker injects it for us).
+        const headers = {
+            "Content-Type": "application/json",
+            ...init.headers || {}
+        };
+        if (!USE_PROXY) {
+            headers["Authorization"] = `Bearer ${METAAPI_TOKEN}`;
+        }
+        const r = await fetch(`${METAAPI_BASE_CLEAN}${path}`, {
             ...init,
-            headers: {
-                Authorization: `Bearer ${METAAPI_TOKEN}`,
-                "Content-Type": "application/json",
-                ...init.headers || {}
-            },
+            headers,
             signal: controller.signal
         });
         if (!r.ok) {
@@ -1382,7 +1414,51 @@ async function getAccount() {
         if (id) {
             const acct = await getMetaApiAccountInfo(id);
             if (acct) return acct;
+            // MetaApi reachable + account registered, but account info not yet
+            // available (account still deploying/synchronizing). Return a
+            // "pending" account so the UI shows MetaApi Cloud as the source.
+            return {
+                login: String(MT5_LOGIN),
+                name: "HotForex Demo (synchronizing with MetaApi...)",
+                server: MT5_SERVER,
+                currency: "USD",
+                leverage: 500,
+                balance: 0,
+                equity: 0,
+                margin: 0,
+                marginFree: 0,
+                marginLevel: 0,
+                profit: 0,
+                accountType: "DEMO",
+                currencyDigits: 2,
+                companyName: "HF Markets Ltd",
+                tradeAllowed: false,
+                connectedAt: Date.now(),
+                source: "MetaApi Cloud"
+            };
         }
+        // MetaApi reachable but no account registered yet. Return a
+        // "needs registration" placeholder so the UI clearly shows MetaApi
+        // is connected but the HotForex account hasn't been added.
+        return {
+            login: String(MT5_LOGIN),
+            name: "HotForex Demo (NOT REGISTERED — add account in MetaApi dashboard)",
+            server: MT5_SERVER,
+            currency: "USD",
+            leverage: 500,
+            balance: 0,
+            equity: 0,
+            margin: 0,
+            marginFree: 0,
+            marginLevel: 0,
+            profit: 0,
+            accountType: "DEMO",
+            currencyDigits: 2,
+            companyName: "HF Markets Ltd",
+            tradeAllowed: false,
+            connectedAt: Date.now(),
+            source: "MetaApi Cloud"
+        };
     }
     return getFallbackAccount();
 }
