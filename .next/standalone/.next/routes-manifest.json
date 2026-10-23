@@ -1,0 +1,547 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate, s-maxage=0"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        }
+      ],
+      "regex": "^(?:/(.*))(?:/)?$"
+    }
+  ],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/api",
+      "regex": "^/api(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api(?:/)?$"
+    },
+    {
+      "page": "/api/admin/subscriptions",
+      "regex": "^/api/admin/subscriptions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/subscriptions(?:/)?$"
+    },
+    {
+      "page": "/api/admin/users",
+      "regex": "^/api/admin/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/users(?:/)?$"
+    },
+    {
+      "page": "/api/ai-agents/terminal",
+      "regex": "^/api/ai\\-agents/terminal(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ai\\-agents/terminal(?:/)?$"
+    },
+    {
+      "page": "/api/auth/login",
+      "regex": "^/api/auth/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/login(?:/)?$"
+    },
+    {
+      "page": "/api/auth/me",
+      "regex": "^/api/auth/me(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/me(?:/)?$"
+    },
+    {
+      "page": "/api/auth/register",
+      "regex": "^/api/auth/register(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/register(?:/)?$"
+    },
+    {
+      "page": "/api/ea/config",
+      "regex": "^/api/ea/config(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ea/config(?:/)?$"
+    },
+    {
+      "page": "/api/ea/logs",
+      "regex": "^/api/ea/logs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ea/logs(?:/)?$"
+    },
+    {
+      "page": "/api/ea/scan",
+      "regex": "^/api/ea/scan(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ea/scan(?:/)?$"
+    },
+    {
+      "page": "/api/ea/start",
+      "regex": "^/api/ea/start(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ea/start(?:/)?$"
+    },
+    {
+      "page": "/api/ea/stats",
+      "regex": "^/api/ea/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ea/stats(?:/)?$"
+    },
+    {
+      "page": "/api/ea/status",
+      "regex": "^/api/ea/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ea/status(?:/)?$"
+    },
+    {
+      "page": "/api/ea/stop",
+      "regex": "^/api/ea/stop(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ea/stop(?:/)?$"
+    },
+    {
+      "page": "/api/gold/agents",
+      "regex": "^/api/gold/agents(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/agents(?:/)?$"
+    },
+    {
+      "page": "/api/gold/ai-agent",
+      "regex": "^/api/gold/ai\\-agent(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/ai\\-agent(?:/)?$"
+    },
+    {
+      "page": "/api/gold/ai-signal",
+      "regex": "^/api/gold/ai\\-signal(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/ai\\-signal(?:/)?$"
+    },
+    {
+      "page": "/api/gold/backtest",
+      "regex": "^/api/gold/backtest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/backtest(?:/)?$"
+    },
+    {
+      "page": "/api/gold/chat",
+      "regex": "^/api/gold/chat(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/chat(?:/)?$"
+    },
+    {
+      "page": "/api/gold/confluence",
+      "regex": "^/api/gold/confluence(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/confluence(?:/)?$"
+    },
+    {
+      "page": "/api/gold/copy-trade",
+      "regex": "^/api/gold/copy\\-trade(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/copy\\-trade(?:/)?$"
+    },
+    {
+      "page": "/api/gold/demo-account",
+      "regex": "^/api/gold/demo\\-account(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/demo\\-account(?:/)?$"
+    },
+    {
+      "page": "/api/gold/demo-close",
+      "regex": "^/api/gold/demo\\-close(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/demo\\-close(?:/)?$"
+    },
+    {
+      "page": "/api/gold/demo-order",
+      "regex": "^/api/gold/demo\\-order(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/demo\\-order(?:/)?$"
+    },
+    {
+      "page": "/api/gold/elliott-wave",
+      "regex": "^/api/gold/elliott\\-wave(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/elliott\\-wave(?:/)?$"
+    },
+    {
+      "page": "/api/gold/false-breakout",
+      "regex": "^/api/gold/false\\-breakout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/false\\-breakout(?:/)?$"
+    },
+    {
+      "page": "/api/gold/fibonacci",
+      "regex": "^/api/gold/fibonacci(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/fibonacci(?:/)?$"
+    },
+    {
+      "page": "/api/gold/history",
+      "regex": "^/api/gold/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/history(?:/)?$"
+    },
+    {
+      "page": "/api/gold/htf-levels",
+      "regex": "^/api/gold/htf\\-levels(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/htf\\-levels(?:/)?$"
+    },
+    {
+      "page": "/api/gold/ict",
+      "regex": "^/api/gold/ict(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/ict(?:/)?$"
+    },
+    {
+      "page": "/api/gold/market",
+      "regex": "^/api/gold/market(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/market(?:/)?$"
+    },
+    {
+      "page": "/api/gold/mt-account",
+      "regex": "^/api/gold/mt\\-account(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/mt\\-account(?:/)?$"
+    },
+    {
+      "page": "/api/gold/mt-connect",
+      "regex": "^/api/gold/mt\\-connect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/mt\\-connect(?:/)?$"
+    },
+    {
+      "page": "/api/gold/mt-order",
+      "regex": "^/api/gold/mt\\-order(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/mt\\-order(?:/)?$"
+    },
+    {
+      "page": "/api/gold/mt-positions",
+      "regex": "^/api/gold/mt\\-positions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/mt\\-positions(?:/)?$"
+    },
+    {
+      "page": "/api/gold/multi-agent",
+      "regex": "^/api/gold/multi\\-agent(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/multi\\-agent(?:/)?$"
+    },
+    {
+      "page": "/api/gold/news",
+      "regex": "^/api/gold/news(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/news(?:/)?$"
+    },
+    {
+      "page": "/api/gold/news-events",
+      "regex": "^/api/gold/news\\-events(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/news\\-events(?:/)?$"
+    },
+    {
+      "page": "/api/gold/news-filter",
+      "regex": "^/api/gold/news\\-filter(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/news\\-filter(?:/)?$"
+    },
+    {
+      "page": "/api/gold/orderbook",
+      "regex": "^/api/gold/orderbook(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/orderbook(?:/)?$"
+    },
+    {
+      "page": "/api/gold/predict",
+      "regex": "^/api/gold/predict(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/predict(?:/)?$"
+    },
+    {
+      "page": "/api/gold/price-action",
+      "regex": "^/api/gold/price\\-action(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/price\\-action(?:/)?$"
+    },
+    {
+      "page": "/api/gold/role-reversal",
+      "regex": "^/api/gold/role\\-reversal(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/role\\-reversal(?:/)?$"
+    },
+    {
+      "page": "/api/gold/signal",
+      "regex": "^/api/gold/signal(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/signal(?:/)?$"
+    },
+    {
+      "page": "/api/gold/smart-signal",
+      "regex": "^/api/gold/smart\\-signal(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/smart\\-signal(?:/)?$"
+    },
+    {
+      "page": "/api/gold/smc-setup",
+      "regex": "^/api/gold/smc\\-setup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/smc\\-setup(?:/)?$"
+    },
+    {
+      "page": "/api/gold/smc-strict",
+      "regex": "^/api/gold/smc\\-strict(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/smc\\-strict(?:/)?$"
+    },
+    {
+      "page": "/api/gold/smc-strict-ai",
+      "regex": "^/api/gold/smc\\-strict\\-ai(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/smc\\-strict\\-ai(?:/)?$"
+    },
+    {
+      "page": "/api/gold/spot",
+      "regex": "^/api/gold/spot(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/spot(?:/)?$"
+    },
+    {
+      "page": "/api/gold/supply-demand",
+      "regex": "^/api/gold/supply\\-demand(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/supply\\-demand(?:/)?$"
+    },
+    {
+      "page": "/api/gold/tickers",
+      "regex": "^/api/gold/tickers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/tickers(?:/)?$"
+    },
+    {
+      "page": "/api/gold/trades",
+      "regex": "^/api/gold/trades(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/trades(?:/)?$"
+    },
+    {
+      "page": "/api/gold/tradingview-webhook",
+      "regex": "^/api/gold/tradingview\\-webhook(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/tradingview\\-webhook(?:/)?$"
+    },
+    {
+      "page": "/api/gold/tv-signals",
+      "regex": "^/api/gold/tv\\-signals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/tv\\-signals(?:/)?$"
+    },
+    {
+      "page": "/api/gold/wyckoff",
+      "regex": "^/api/gold/wyckoff(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/wyckoff(?:/)?$"
+    },
+    {
+      "page": "/api/gold/wyckoff-strict",
+      "regex": "^/api/gold/wyckoff\\-strict(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/gold/wyckoff\\-strict(?:/)?$"
+    },
+    {
+      "page": "/api/mql5/account-info",
+      "regex": "^/api/mql5/account\\-info(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mql5/account\\-info(?:/)?$"
+    },
+    {
+      "page": "/api/mql5/close-all",
+      "regex": "^/api/mql5/close\\-all(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mql5/close\\-all(?:/)?$"
+    },
+    {
+      "page": "/api/mql5/close-position",
+      "regex": "^/api/mql5/close\\-position(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mql5/close\\-position(?:/)?$"
+    },
+    {
+      "page": "/api/mql5/history",
+      "regex": "^/api/mql5/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mql5/history(?:/)?$"
+    },
+    {
+      "page": "/api/mql5/indicator",
+      "regex": "^/api/mql5/indicator(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mql5/indicator(?:/)?$"
+    },
+    {
+      "page": "/api/mql5/order",
+      "regex": "^/api/mql5/order(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mql5/order(?:/)?$"
+    },
+    {
+      "page": "/api/mql5/positions",
+      "regex": "^/api/mql5/positions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mql5/positions(?:/)?$"
+    },
+    {
+      "page": "/api/mql5/symbol-info",
+      "regex": "^/api/mql5/symbol\\-info(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mql5/symbol\\-info(?:/)?$"
+    },
+    {
+      "page": "/api/mt5/account",
+      "regex": "^/api/mt5/account(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mt5/account(?:/)?$"
+    },
+    {
+      "page": "/api/mt5/candles",
+      "regex": "^/api/mt5/candles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mt5/candles(?:/)?$"
+    },
+    {
+      "page": "/api/mt5/close",
+      "regex": "^/api/mt5/close(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mt5/close(?:/)?$"
+    },
+    {
+      "page": "/api/mt5/close-all",
+      "regex": "^/api/mt5/close\\-all(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mt5/close\\-all(?:/)?$"
+    },
+    {
+      "page": "/api/mt5/history",
+      "regex": "^/api/mt5/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mt5/history(?:/)?$"
+    },
+    {
+      "page": "/api/mt5/order",
+      "regex": "^/api/mt5/order(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mt5/order(?:/)?$"
+    },
+    {
+      "page": "/api/mt5/positions",
+      "regex": "^/api/mt5/positions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mt5/positions(?:/)?$"
+    },
+    {
+      "page": "/api/mt5/reconnect",
+      "regex": "^/api/mt5/reconnect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mt5/reconnect(?:/)?$"
+    },
+    {
+      "page": "/api/mt5/status",
+      "regex": "^/api/mt5/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/mt5/status(?:/)?$"
+    },
+    {
+      "page": "/api/oanda/account",
+      "regex": "^/api/oanda/account(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/oanda/account(?:/)?$"
+    },
+    {
+      "page": "/api/oanda/candles",
+      "regex": "^/api/oanda/candles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/oanda/candles(?:/)?$"
+    },
+    {
+      "page": "/api/oanda/pricing",
+      "regex": "^/api/oanda/pricing(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/oanda/pricing(?:/)?$"
+    },
+    {
+      "page": "/api/subscriptions/plans",
+      "regex": "^/api/subscriptions/plans(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/subscriptions/plans(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

@@ -1,0 +1,3 @@
+{
+  "/api/oanda/pricing/route": "app/api/oanda/pricing/route.js"
+}

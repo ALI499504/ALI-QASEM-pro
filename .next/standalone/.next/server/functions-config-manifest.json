@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/ai-agents/terminal": {
+      "maxDuration": 30
+    },
+    "/api/ea/scan": {
+      "maxDuration": 15
+    },
+    "/api/gold/ai-agent": {
+      "maxDuration": 20
+    },
+    "/api/gold/backtest": {
+      "maxDuration": 60
+    },
+    "/api/gold/confluence": {
+      "maxDuration": 20
+    },
+    "/api/gold/demo-order": {
+      "maxDuration": 15
+    },
+    "/api/gold/multi-agent": {
+      "maxDuration": 30
+    },
+    "/api/gold/news-events": {
+      "maxDuration": 15
+    },
+    "/api/gold/news-filter": {
+      "maxDuration": 15
+    },
+    "/api/gold/smc-strict-ai": {
+      "maxDuration": 15
+    },
+    "/api/gold/wyckoff-strict": {
+      "maxDuration": 20
+    },
+    "/api/mql5/indicator": {
+      "maxDuration": 15
+    },
+    "/api/mql5/order": {
+      "maxDuration": 15
+    },
+    "/api/mt5/candles": {
+      "maxDuration": 15
+    },
+    "/api/mt5/order": {
+      "maxDuration": 15
+    }
+  }
+}

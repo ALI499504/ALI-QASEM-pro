@@ -1,0 +1,3 @@
+{
+  "/api/oanda/candles/route": "app/api/oanda/candles/route.js"
+}
