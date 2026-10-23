@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { closeMT5Position } from "@/lib/mt5-cloud-bridge";
+import { closeMT5Position } from "@/lib/metaapi-cloud-bridge";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

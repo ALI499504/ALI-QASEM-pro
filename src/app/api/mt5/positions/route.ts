@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { getMT5Positions } from "@/lib/mt5-cloud-bridge";
+import { getMT5PositionsAsync as getMT5Positions } from "@/lib/metaapi-cloud-bridge";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// GET /api/mt5/positions — all open MT5 positions
+// GET /api/mt5/positions — all open MT5 positions (MetaApi or Demo fallback)
 export async function GET() {
   try {
-    const positions = getMT5Positions();
+    const positions = await getMT5Positions();
     return NextResponse.json({ positions, count: positions.length }, {
       headers: { "Cache-Control": "no-store" },
     });
