@@ -1414,7 +1414,51 @@ async function getAccount() {
         if (id) {
             const acct = await getMetaApiAccountInfo(id);
             if (acct) return acct;
+            // MetaApi reachable + account registered, but account info not yet
+            // available (account still deploying/synchronizing). Return a
+            // "pending" account so the UI shows MetaApi Cloud as the source.
+            return {
+                login: String(MT5_LOGIN),
+                name: "HotForex Demo (synchronizing with MetaApi...)",
+                server: MT5_SERVER,
+                currency: "USD",
+                leverage: 500,
+                balance: 0,
+                equity: 0,
+                margin: 0,
+                marginFree: 0,
+                marginLevel: 0,
+                profit: 0,
+                accountType: "DEMO",
+                currencyDigits: 2,
+                companyName: "HF Markets Ltd",
+                tradeAllowed: false,
+                connectedAt: Date.now(),
+                source: "MetaApi Cloud"
+            };
         }
+        // MetaApi reachable but no account registered yet. Return a
+        // "needs registration" placeholder so the UI clearly shows MetaApi
+        // is connected but the HotForex account hasn't been added.
+        return {
+            login: String(MT5_LOGIN),
+            name: "HotForex Demo (NOT REGISTERED — add account in MetaApi dashboard)",
+            server: MT5_SERVER,
+            currency: "USD",
+            leverage: 500,
+            balance: 0,
+            equity: 0,
+            margin: 0,
+            marginFree: 0,
+            marginLevel: 0,
+            profit: 0,
+            accountType: "DEMO",
+            currencyDigits: 2,
+            companyName: "HF Markets Ltd",
+            tradeAllowed: false,
+            connectedAt: Date.now(),
+            source: "MetaApi Cloud"
+        };
     }
     return getFallbackAccount();
 }

@@ -1,4 +1,8 @@
 {
+  "/api/ai-agents/terminal/route": "app/api/ai-agents/terminal/route.js",
   "/api/mt5/account/route": "app/api/mt5/account/route.js",
-  "/api/mt5/status/route": "app/api/mt5/status/route.js"
+  "/api/mt5/candles/route": "app/api/mt5/candles/route.js",
+  "/api/mt5/positions/route": "app/api/mt5/positions/route.js",
+  "/api/mt5/status/route": "app/api/mt5/status/route.js",
+  "/page": "app/page.js"
 }
