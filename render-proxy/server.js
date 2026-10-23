@@ -1,13 +1,13 @@
 /**
- * BFX AI — MetaApi Cloud Proxy v7.0
+ * BFX AI — MetaApi Cloud Proxy v8.0
  * 
- * Routes to 4 different MetaApi hosts based on path:
+ * CORRECTED: MetaStats uses domain agiliumtrade.ai (not agiliumtrade.agiliumtrade.ai)
  * 
- *   /provisioning/* → mt-provisioning-api-v1 (account management)
- *   /market-data/*  → mt-market-data-client-api-v1 (historical candles/ticks)
- *   /client-api/*   → mt-client-api-v1 (account info, positions)
- *   /metastats/*    → metastats-api-v1.london (account metrics, trades history)
- *   default         → mt-provisioning-api-v1
+ * Hosts:
+ *   mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai → account management
+ *   mt-market-data-client-api-v1.agiliumtrade.agiliumtrade.ai → historical candles
+ *   mt-client-api-v1.agiliumtrade.agiliumtrade.ai → client API
+ *   metastats-api-v1.london.agiliumtrade.ai → MetaStats (different domain!)
  */
 
 const express = require("express");
@@ -22,7 +22,8 @@ const HOSTS = {
   provisioning: "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai",
   marketData: "https://mt-market-data-client-api-v1.agiliumtrade.agiliumtrade.ai",
   clientApi: "https://mt-client-api-v1.agiliumtrade.agiliumtrade.ai",
-  metaStats: "https://metastats-api-v1.london.agiliumtrade.agiliumtrade.ai",
+  // CORRECTED: MetaStats uses regional subdomain + different domain
+  metaStats: "https://metastats-api-v1.london.agiliumtrade.ai",
 };
 
 function routeToHost(path) {
@@ -46,7 +47,7 @@ app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     service: "bfx-mt5-proxy",
-    version: "7.0.0",
+    version: "8.0.0",
     hosts: HOSTS,
     metaapiTokenConfigured: !!METAAPI_TOKEN,
     timestamp: new Date().toISOString(),
@@ -96,9 +97,10 @@ app.use(async (req, res) => {
         respHeaders[key] = value;
       }
     });
-    respHeaders["X-BFX-Proxy"] = "render-node-v7.0";
+    respHeaders["X-BFX-Proxy"] = "render-node-v8.0";
     respHeaders["X-BFX-Upstream-Status"] = String(upstream.status);
     respHeaders["X-BFX-Upstream-Host"] = upstreamHost;
+    respHeaders["X-BFX-Upstream-URL"] = upstreamUrl;
 
     const respBody = await upstream.text();
     res.status(upstream.status).set(respHeaders).send(respBody);
@@ -109,7 +111,7 @@ app.use(async (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`BFX MT5 Proxy v7.0 listening on port ${PORT}`);
+  console.log(`BFX MT5 Proxy v8.0 listening on port ${PORT}`);
   console.log(`  Provisioning: ${HOSTS.provisioning}`);
   console.log(`  Market data:  ${HOSTS.marketData}`);
   console.log(`  Client API:   ${HOSTS.clientApi}`);
