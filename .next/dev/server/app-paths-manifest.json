@@ -1,4 +1,5 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/api/ai-agents/terminal/route": "app/api/ai-agents/terminal/route.js",
   "/api/mt5/account/route": "app/api/mt5/account/route.js",
   "/api/mt5/candles/route": "app/api/mt5/candles/route.js",
