@@ -1,0 +1,41 @@
+name: Windows RDP with MT5
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+jobs:
+  rdp:
+    runs-on: windows-latest
+    timeout-minutes: 360
+    steps:
+    - name: Setup ngrok
+      run: |
+        Invoke-WebRequest "https://bin.equinox.io/c/bNyj1mQ5IsP/ngrok-v3-stable-windows-amd64.zip" -OutFile ngrok.zip
+        Expand-Archive ngrok.zip
+        .\ngrok\ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+      shell: pwsh
+    - name: Enable RDP
+      run: |
+        Set-ItemProperty 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name fDenyTSConnections -value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        net user runner ${{ secrets.RDP_PASSWORD }} /add
+        net localgroup Administrators runner /add
+      shell: pwsh
+    - name: Start tunnel
+      run: |
+        Start-Job { .\ngrok\ngrok.exe tcp 3389 }
+        Start-Sleep 10
+        $r = Invoke-WebRequest "http://localhost:4040/api/tunnels" -UseBasicParsing
+        $t = ($r.Content | ConvertFrom-Json).tunnels[0].public_url
+        Write-Host "====== RDP ADDRESS ======"
+        Write-Host $t
+        Write-Host "User: runner  Pass: ${{ secrets.RDP_PASSWORD }}"
+        Write-Host "=========================="
+      shell: pwsh
+    - name: Keep alive
+      run: |
+        Write-Host "Install MT5 from metatrader5.com"
+        Write-Host "Login: 49877585 / Server: HFMarketsGlobal-Demo"
+        $end = (Get-Date).AddHours(5.5)
+        while ((Get-Date) -lt $end) { Start-Sleep 300 }
+      shell: pwsh
