@@ -1,12 +1,15 @@
 # Cloudflare Worker configuration for BFX AI MetaApi proxy
 # ====================================================================
 # Deploy with: wrangler deploy
-# This creates a Worker at https://bfx-mt5-proxy.<your-subdomain>.workers.dev
+# This creates a Worker at https://bfx-mt5-proxy.quilt-estimate.workers.dev
 # That URL replaces api.metaapi.cloud in our Next.js bridge.
 
 name = "bfx-mt5-proxy"
 main = "worker.js"
 compatibility_date = "2024-09-23"
+
+# Target the Quilt Estimate account (which already hosts mrobot-gold)
+account_id = "da0d78c6182015b0e7690cfaa1666ecd"
 
 # Workers are free for 100,000 requests/day — plenty for our use case.
 # Paid plan ($5/month) gives 10M requests/day + 30s CPU time per request

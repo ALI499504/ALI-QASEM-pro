@@ -81,20 +81,23 @@ export default {
     const upstreamUrl = `https://api.metaapi.cloud/${path}${queryString}`;
 
     // ====== Build upstream request ======
-    const reqHeaders = new Headers(request.headers);
-    // Inject the MetaApi token
+    // IMPORTANT: When using Cloudflare Workers' fetch(), do NOT set the Host
+    // header manually — Workers sets it automatically based on the URL.
+    // Setting it manually can cause a 526 (Invalid SSL certificate) error.
+    const reqHeaders = new Headers();
+    // Inject the MetaApi token (stored as Cloudflare Secret)
     reqHeaders.set("Authorization", `Bearer ${env.METAAPI_TOKEN}`);
     reqHeaders.set("Content-Type", "application/json");
-    // Identify our worker in upstream logs
+    // Identify our worker in upstream logs (optional)
     reqHeaders.set("User-Agent", "BFX-AI-Worker-Proxy/1.0");
-    // Remove cf-* headers that might leak sandbox info
-    reqHeaders.delete("cf-connecting-ip");
-    reqHeaders.delete("cf-ipcountry");
-    reqHeaders.delete("cf-ray");
-    reqHeaders.delete("x-forwarded-for");
-    reqHeaders.delete("x-real-ip");
-    // Host must be api.metaapi.cloud, not the worker
-    reqHeaders.set("Host", "api.metaapi.cloud");
+    // Copy Accept header from client if present
+    const clientAccept = request.headers.get("Accept");
+    if (clientAccept) reqHeaders.set("Accept", clientAccept);
+    // Copy request body content-type for POST/PUT
+    const clientContentType = request.headers.get("Content-Type");
+    if (clientContentType && request.method !== "GET" && request.method !== "HEAD") {
+      reqHeaders.set("Content-Type", clientContentType);
+    }
 
     // ====== Read body (for POST/PUT/PATCH) ======
     let body = null;
@@ -103,17 +106,23 @@ export default {
     }
 
     // ====== Forward to MetaApi Cloud ======
+    // Cloudflare Workers' fetch() automatically:
+    //   - Sets Host header based on URL (api.metaapi.cloud)
+    //   - Uses SNI = api.metaapi.cloud
+    //   - Verifies upstream SSL certificate (real Let's Encrypt cert)
     let upstream;
     try {
       upstream = await fetch(upstreamUrl, {
         method: request.method,
         headers: reqHeaders,
         body: body,
+        // cf: {} tells Cloudflare to NOT cache this (it's an API call)
+        cf: { cacheTtl: 0, cacheEverything: false },
       });
     } catch (err) {
       return jsonError(
         502,
-        `Failed to reach api.metaapi.cloud: ${err.message}. The MetaApi servers may be down or your token may be invalid.`
+        `Worker fetch to api.metaapi.cloud failed: ${err.message}. Check that api.metaapi.cloud is online and your token is valid.`
       );
     }
 
