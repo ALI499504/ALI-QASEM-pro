@@ -10,28 +10,37 @@ jobs:
     steps:
     - name: Setup ngrok
       run: |
-        Invoke-WebRequest "https://bin.equinox.io/c/bNyj1mQ5IsP/ngrok-v3-stable-windows-amd64.zip" -OutFile ngrok.zip
-        Expand-Archive ngrok.zip
-        .\ngrok\ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+        Invoke-WebRequest "https://bin.equinox.io/c/bNyj1mQ5IsP/ngrok-v3-stable-windows-amd64.zip" -OutFile ngrok.zip -UseBasicParsing
+        Expand-Archive ngrok.zip -DestinationPath ngrok -Force
+        .\ngrok\ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
       shell: pwsh
+
     - name: Enable RDP
       run: |
         Set-ItemProperty 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name fDenyTSConnections -value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        net user runner ${{ secrets.RDP_PASSWORD }} /add
+        net user runner $env:RDP_PASSWORD /add
         net localgroup Administrators runner /add
+      env:
+        RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
       shell: pwsh
+
     - name: Start tunnel
       run: |
-        Start-Job { .\ngrok\ngrok.exe tcp 3389 }
-        Start-Sleep 10
+        Start-Process .\ngrok\ngrok.exe -ArgumentList "tcp 3389" -NoNewWindow
+        Start-Sleep 15
         $r = Invoke-WebRequest "http://localhost:4040/api/tunnels" -UseBasicParsing
         $t = ($r.Content | ConvertFrom-Json).tunnels[0].public_url
-        Write-Host "====== RDP ADDRESS ======"
-        Write-Host $t
-        Write-Host "User: runner  Pass: ${{ secrets.RDP_PASSWORD }}"
-        Write-Host "=========================="
+        Write-Host "=============================="
+        Write-Host "RDP: $t"
+        Write-Host "User: runner  Pass: $env:RDP_PASSWORD"
+        Write-Host "=============================="
+      env:
+        RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
       shell: pwsh
+
     - name: Keep alive
       run: |
         Write-Host "Install MT5 from metatrader5.com"
