@@ -1,0 +1,85 @@
+name: Windows RDP
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+jobs:
+  rdp:
+    runs-on: windows-latest
+    timeout-minutes: 360
+    steps:
+    - name: Enable RDP and create user
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name fDenyTSConnections -value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        $pw = ConvertTo-SecureString -String $env:RDP_PASSWORD -AsPlainText -Force
+        New-LocalUser -Name "runner" -Password $pw -FullName "Runner" -Description "RDP" -ErrorAction SilentlyContinue
+        Add-LocalGroupMember -Group "Administrators" -Member "runner" -ErrorAction SilentlyContinue
+        Write-Host "User created successfully"
+      env:
+        RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
+      shell: pwsh
+
+    - name: Download bore
+      run: |
+        Write-Host "Downloading bore..."
+        Invoke-WebRequest "https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-pc-windows-gnu.zip" -OutFile bore.zip -UseBasicParsing
+        Expand-Archive bore.zip -DestinationPath bore -Force
+        Write-Host "bore downloaded"
+        dir bore
+      shell: pwsh
+
+    - name: Start bore tunnel
+      run: |
+        Write-Host "Starting bore tunnel..."
+        $proc = Start-Process -FilePath ".\bore\bore.exe" -ArgumentList "local 3389 --to bore.pub" -NoNewWindow -PassThru -RedirectStandardOutput "bore_out.txt" -RedirectStandardError "bore_err.txt"
+        Write-Host "Waiting for tunnel..."
+        Start-Sleep 15
+        $output = Get-Content "bore_out.txt" -ErrorAction SilentlyContinue
+        $errorOut = Get-Content "bore_err.txt" -ErrorAction SilentlyContinue
+        Write-Host "Output: $output"
+        Write-Host "Error: $errorOut"
+        if ($output -match "listening.*(\d+)") {
+          $port = $matches[1]
+          Write-Host "=============================="
+          Write-Host "RDP ADDRESS: bore.pub:$port"
+          Write-Host "USERNAME: runner"
+          Write-Host "PASSWORD: $env:RDP_PASSWORD"
+          Write-Host "=============================="
+        } elseif ($output -match "remote port (\d+)") {
+          $port = $matches[1]
+          Write-Host "=============================="
+          Write-Host "RDP ADDRESS: bore.pub:$port"
+          Write-Host "USERNAME: runner"
+          Write-Host "PASSWORD: $env:RDP_PASSWORD"
+          Write-Host "=============================="
+        } else {
+          Write-Host "=============================="
+          Write-Host "Check bore output above for address"
+          Write-Host "USERNAME: runner"
+          Write-Host "PASSWORD: $env:RDP_PASSWORD"
+          Write-Host "=============================="
+        }
+      env:
+        RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
+      shell: pwsh
+
+    - name: Keep alive 5.5 hours
+      run: |
+        Write-Host "=============================="
+        Write-Host "RDP is running!"
+        Write-Host "Connect via Remote Desktop"
+        Write-Host "Then install MT5:"
+        Write-Host "1. Open Edge browser"
+        Write-Host "2. Go to metatrader5.com"
+        Write-Host "3. Download and install MT5"
+        Write-Host "4. Login: 49877585"
+        Write-Host "5. Server: HFMarketsGlobal-Demo"
+        Write-Host "=============================="
+        $end = (Get-Date).AddHours(5.5)
+        while ((Get-Date) -lt $end) {
+          $remaining = [math]::Round(($end - (Get-Date)).TotalMinutes)
+          Write-Host "Session active: $remaining minutes remaining"
+          Start-Sleep 300
+        }
+      shell: pwsh

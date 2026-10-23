@@ -1,0 +1,32 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+yfinance==0.2.54
+pandas==2.2.3
+numpy==2.2.1
+scikit-learn==1.6.0
+ta==0.11.0
+SQLAlchemy==2.0.36
+pydantic==2.10.4
+python-dotenv==1.0.1
+apscheduler==3.11.0
+requests==2.32.3
+httpx==0.28.1
+vaderSentiment==3.3.2
+pymongo==4.10.1
+psycopg2-binary==2.9.12
+dnspython==2.8.0
+passlib==1.7.4
+bcrypt==4.0.1
+pyjwt==2.10.1
+slowapi==0.1.10
+# AI/LLM Integration (optional - will load dynamically)
+openai==1.54.0
+anthropic==0.32.0
+# Additional data sources
+alpha-vantage==2.3.1
+# Social sentiment
+praw==7.7.1
+# Async utilities
+aioredis==2.0.1
+# WebSockets
+websockets==12.0
