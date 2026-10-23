@@ -48,8 +48,32 @@ let cachedAccountId: string | null = null;
 let connectionCheckTs = 0;
 let connectionAvailable: boolean | null = null;
 
-const METAAPI_BASE = "https://api.metaapi.cloud";
-const METAAPI_TIMEOUT_MS = 8000;
+// ============================================================================
+// MetaApi base URL — supports TWO modes:
+//
+//   Mode 1 (default, fallback): direct connection to api.metaapi.cloud.
+//     This works in production deployments (Cloudflare Pages/Workers, Vercel,
+//     any VPS with open internet). Fails on our sandbox because the egress
+//     proxy intercepts *.metaapi.cloud with a fake cert.
+//
+//   Mode 2 (production-recommended): route through our Cloudflare Worker
+//     proxy. Set METAAPI_PROXY_URL env var to your Worker URL, e.g.:
+//       METAAPI_PROXY_URL=https://bfx-mt5-proxy.yourname.workers.dev
+//     The Worker injects the MetaApi token + bypasses the sandbox block.
+//     Setup: see /home/z/my-project/cloudflare-worker/worker.js
+// ============================================================================
+const METAAPI_BASE =
+  process.env.METAAPI_PROXY_URL || "https://api.metaapi.cloud";
+
+// Strip trailing slash for clean path joining
+const METAAPI_BASE_CLEAN = METAAPI_BASE.replace(/\/$/, "");
+
+// When using the Worker proxy, the token is injected BY THE WORKER (it's
+// stored as a Cloudflare Secret there). When calling api.metaapi.cloud
+// directly, we attach the token ourselves here.
+const USE_PROXY = METAAPI_BASE !== "https://api.metaapi.cloud";
+
+const METAAPI_TIMEOUT_MS = USE_PROXY ? 15000 : 8000;
 
 // ====================== Types (MT5-compatible) ======================
 export interface MetaApiAccount {
@@ -128,12 +152,18 @@ export async function checkMetaApiReachable(): Promise<boolean> {
   try {
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), METAAPI_TIMEOUT_MS);
-    const r = await fetch(`${METAAPI_BASE}/users/current/accounts`, {
+    // When using the proxy, the Worker injects the Authorization header,
+    // so we DON'T attach it here. When calling api.metaapi.cloud directly,
+    // we attach the token ourselves.
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (!USE_PROXY) {
+      headers["Authorization"] = `Bearer ${METAAPI_TOKEN}`;
+    }
+    const r = await fetch(`${METAAPI_BASE_CLEAN}/users/current/accounts`, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${METAAPI_TOKEN}`,
-        "Content-Type": "application/json",
-      },
+      headers,
       signal: controller.signal,
     });
     clearTimeout(t);
@@ -151,13 +181,18 @@ async function metaApiFetch(path: string, init: RequestInit = {}): Promise<any> 
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), METAAPI_TIMEOUT_MS);
   try {
-    const r = await fetch(`${METAAPI_BASE}${path}`, {
+    // Build headers — only attach Authorization when calling api.metaapi.cloud
+    // directly (when using the Worker proxy, the Worker injects it for us).
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(init.headers as Record<string, string> || {}),
+    };
+    if (!USE_PROXY) {
+      headers["Authorization"] = `Bearer ${METAAPI_TOKEN}`;
+    }
+    const r = await fetch(`${METAAPI_BASE_CLEAN}${path}`, {
       ...init,
-      headers: {
-        Authorization: `Bearer ${METAAPI_TOKEN}`,
-        "Content-Type": "application/json",
-        ...(init.headers || {}),
-      },
+      headers,
       signal: controller.signal,
     });
     if (!r.ok) {

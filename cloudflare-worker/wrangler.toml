@@ -1,0 +1,29 @@
+# Cloudflare Worker configuration for BFX AI MetaApi proxy
+# ====================================================================
+# Deploy with: wrangler deploy
+# This creates a Worker at https://bfx-mt5-proxy.<your-subdomain>.workers.dev
+# That URL replaces api.metaapi.cloud in our Next.js bridge.
+
+name = "bfx-mt5-proxy"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+
+# Workers are free for 100,000 requests/day — plenty for our use case.
+# Paid plan ($5/month) gives 10M requests/day + 30s CPU time per request
+# (needed for slower MetaApi endpoints like full account sync).
+
+# === Secrets (set via wrangler CLI, NOT here) ===
+# wrangler secret put METAAPI_TOKEN   → paste your MetaApi JWT
+# wrangler secret put ALLOWED_ORIGIN  → optional: "https://your-site.com"
+
+# === Optional: bind a KV namespace for response caching ===
+# Reduce MetaApi rate-limit pressure by caching candle responses for 5s
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "<kv-namespace-id>"
+
+# === Custom domain (optional, instead of *.workers.dev) ===
+# [env.production]
+# routes = [
+#   { pattern = "mt5.your-domain.com/*", zone_name = "your-domain.com" }
+# ]

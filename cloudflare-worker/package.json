@@ -1,0 +1,15 @@
+{
+  "name": "bfx-mt5-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker proxy to MetaApi Cloud — gives the BFX AI platform real HotForex MT5 data",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.95.0"
+  }
+}
