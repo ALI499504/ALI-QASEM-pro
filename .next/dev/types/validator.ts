@@ -47,6 +47,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 }
 
 
+// Validate ../../../src/app/mql5-signals/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/mql5-signals">> = Specific
+  const handler = {} as typeof import("../../../src/app/mql5-signals/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../../src/app/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/">> = Specific
@@ -546,6 +555,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/gold/wyckoff">> = Specific
   const handler = {} as typeof import("../../../src/app/api/gold/wyckoff/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../../src/app/api/mql5-signals/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/mql5-signals">> = Specific
+  const handler = {} as typeof import("../../../src/app/api/mql5-signals/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check
