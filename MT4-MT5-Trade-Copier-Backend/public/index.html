@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BFX Trade Copier — MetaTrader Copy Trading Platform</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Inter',system-ui,sans-serif; background:linear-gradient(135deg,#020617,#0c1226,#1e1b4b); color:#e2e8f0; min-height:100vh; }
+.header { padding:24px 32px; background:rgba(2,6,23,0.95); backdrop-filter:blur(12px); border-bottom:1px solid rgba(99,102,241,0.3); position:sticky; top:0; z-index:100; }
+.header-inner { max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; }
+.brand h1 { font-size:26px; font-weight:800; background:linear-gradient(135deg,#fbbf24,#f59e0b); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.brand p { color:#94a3b8; font-size:13px; margin-top:4px; }
+.header-badge { padding:6px 14px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border-radius:20px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px; }
+.dot { width:8px; height:8px; background:#fff; border-radius:50%; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100% {opacity:1;} 50% {opacity:0.5;} }
+.container { max-width:1200px; margin:0 auto; padding:32px; }
+.hero { text-align:center; padding:60px 0 40px; }
+.hero h2 { font-size:42px; font-weight:800; margin-bottom:16px; background:linear-gradient(135deg,#fbbf24,#f59e0b,#ec4899); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.hero p { color:#94a3b8; font-size:18px; max-width:600px; margin:0 auto; line-height:1.6; }
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin:40px 0; }
+.stat-card { background:rgba(15,23,42,0.6); border:1px solid rgba(99,102,241,0.2); border-radius:12px; padding:24px; text-align:center; transition:transform 0.2s; }
+.stat-card:hover { transform:translateY(-4px); }
+.stat-card .icon { font-size:32px; margin-bottom:12px; }
+.stat-card .label { color:#94a3b8; font-size:13px; margin-bottom:6px; }
+.stat-card .value { font-size:28px; font-weight:800; }
+.features { margin:40px 0; }
+.features h3 { font-size:24px; margin-bottom:24px; text-align:center; }
+.features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+.feature-card { background:linear-gradient(135deg,rgba(15,23,42,0.8),rgba(30,27,75,0.4)); border:1px solid rgba(99,102,241,0.2); border-radius:12px; padding:24px; }
+.feature-card .icon { font-size:28px; margin-bottom:12px; }
+.feature-card h4 { font-size:16px; font-weight:700; margin-bottom:8px; color:#f1f5f9; }
+.feature-card p { color:#94a3b8; font-size:13px; line-height:1.6; }
+.api-section { margin:40px 0; }
+.api-section h3 { font-size:24px; margin-bottom:20px; text-align:center; }
+.api-card { background:rgba(15,23,42,0.6); border:1px solid rgba(99,102,241,0.2); border-radius:12px; padding:16px 20px; margin-bottom:12px; }
+.method { display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:700; margin-right:8px; }
+.POST { background:rgba(99,102,241,0.2); color:#a5b4fc; }
+.GET { background:rgba(16,185,129,0.2); color:#6ee7b7; }
+.path { font-family:monospace; font-size:13px; color:#f1f5f9; }
+.desc { color:#64748b; font-size:12px; margin-top:4px; }
+.footer { padding:32px; background:rgba(2,6,23,0.85); border-top:1px solid rgba(99,102,241,0.2); text-align:center; }
+.footer a { color:#fbbf24; text-decoration:none; font-weight:600; }
+.footer p { color:#64748b; font-size:12px; margin-top:8px; }
+.actions { text-align:center; margin:40px 0; }
+.btn { display:inline-block; padding:14px 32px; border-radius:8px; font-size:15px; font-weight:700; text-decoration:none; margin:8px; }
+.btn-primary { background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; box-shadow:0 4px 12px rgba(79,70,229,0.4); }
+.btn-secondary { background:linear-gradient(135deg,#fbbf24,#f59e0b); color:#000; box-shadow:0 4px 12px rgba(251,191,36,0.4); }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-inner">
+    <div class="brand">
+      <h1>⚡ BFX Trade Copier</h1>
+      <p>منصة نسخ الصفقات الاحترافية لـ MetaTrader 4 & 5</p>
+    </div>
+    <div class="header-badge">
+      <div class="dot"></div>
+      Backend Online
+    </div>
+  </div>
+</div>
+<div class="container">
+  <div class="hero">
+    <h2>نسخ الصفقات في الزمن الحقيقي</h2>
+    <p>منصة production-ready لنسخ صفقات MetaTrader 4 و 5 — مع إدارة مخاطر متقدمة، نسخ فوري عبر WebSocket، ودعم متعدد الحسابات.</p>
+  </div>
+  <div class="actions">
+    <a href="https://github.com/tetratensor/MT4-MT5-Trade-Copier-Backend" target="_blank" class="btn btn-primary">📖 الكود على GitHub</a>
+    <a href="/health" class="btn btn-secondary">🔍 فحص السيرفر</a>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="icon">⚡</div><div class="label">زمن النسخ</div><div class="value" style="color:#10b981">~5s</div></div>
+    <div class="stat-card"><div class="icon">📊</div><div class="label">المنصات</div><div class="value" style="color:#3b82f6">MT4+MT5</div></div>
+    <div class="stat-card"><div class="icon">🔄</div><div class="label">النسخ</div><div class="value" style="color:#a855f7">Cross</div></div>
+    <div class="stat-card"><div class="icon">🛡️</div><div class="label">التشفير</div><div class="value" style="color:#fbbf24">RSA+AES</div></div>
+    <div class="stat-card"><div class="icon">📡</div><div class="label">Real-time</div><div class="value" style="color:#ec4899">Socket.IO</div></div>
+    <div class="stat-card"><div class="icon">💳</div><div class="label">المدفوعات</div><div class="value" style="color:#10b981">Crypto</div></div>
+  </div>
+  <div class="features">
+    <h3>🚀 المميزات الاحترافية</h3>
+    <div class="features-grid">
+      <div class="feature-card"><div class="icon">🔄</div><h4>نسخ فوري للصفقات</h4><p>نسخ صفقات Master إلى Follower في ~5 ثوانٍ. يدعم MT4→MT5، MT5→MT4، MT4→MT4، MT5→MT5 عبر بريدج API مخصص.</p></div>
+      <div class="feature-card"><div class="icon">⚙️</div><h4>إدارة مخاطر متقدمة</h4><p>Fixed Lot، Lot Multiplier، Balance Multiplier، Fixed Balance Multiplier. حدود min/max lot + SL/TP management كامل.</p></div>
+      <div class="feature-card"><div class="icon">📊</div><h4>لوحة تحكم + تحليلات</h4><p>مخططات Balance/PnL، حساب Win Rate، إحصائيات الصفقات، مقاييس أداء الـ clusters.</p></div>
+      <div class="feature-card"><div class="icon">🔐</div><h4>أمان احترافي</h4><p>تشفير RSA+AES هجين لجميع طلبات API. JWT authentication. Rate limiting. Password hashing بـ bcrypt.</p></div>
+      <div class="feature-card"><div class="icon">📡</div><h4>WebSocket فوري</h4><p>تحديثات real-time عبر Socket.IO. تنبيهات open/close/modify. تحديثات حالة الاشتراك والمدفوعات.</p></div>
+      <div class="feature-card"><div class="icon">💳</div><h4>مدفوعات كريبتو</h4><p>تكامل Cryptomus للمدفوعات. اشتراكات شهرية/سنوية. أكواد خصم. نظام affiliate بعمولة 10%.</p></div>
+    </div>
+  </div>
+  <div class="api-section">
+    <h3>📡 API Endpoints</h3>
+    <div class="api-card"><span class="method POST">POST</span><span class="path">/api/user/register</span><div class="desc">تسجيل مستخدم جديد</div></div>
+    <div class="api-card"><span class="method POST">POST</span><span class="path">/api/user/login</span><div class="desc">تسجيل الدخول + JWT token</div></div>
+    <div class="api-card"><span class="method POST">POST</span><span class="path">/api/dashboard/create-cluster</span><div class="desc">إنشاء cluster نسخ جديد (Master + Followers)</div></div>
+    <div class="api-card"><span class="method POST">POST</span><span class="path">/api/dashboard/get-clusters</span><div class="desc">عرض جميع الـ clusters</div></div>
+    <div class="api-card"><span class="method POST">POST</span><span class="path">/api/dashboard/create-copier</span><div class="desc">إضافة copier جديد للـ cluster</div></div>
+    <div class="api-card"><span class="method POST">POST</span><span class="path">/api/dashboard/deploy-account</span><div class="desc">نشر حساب MT4/MT5 جديد</div></div>
+    <div class="api-card"><span class="method POST">POST</span><span class="path">/api/dashboard/get-dashboard-card-data</span><div class="desc">بيانات لوحة التحكم (balance, PnL, win rate)</div></div>
+    <div class="api-card"><span class="method GET">GET</span><span class="path">/api/admin/...</span><div class="desc">إدارة المستخدمين + الاشتراكات</div></div>
+  </div>
+  <div class="actions">
+    <a href="https://github.com/tetratensor/MT4-MT5-Trade-Copier-Backend" target="_blank" class="btn btn-primary">📖 استعرض الكود الكامل</a>
+    <a href="/health" class="btn btn-secondary">🔍 فحص صحة السيرفر</a>
+  </div>
+</div>
+<div class="footer">
+  <p>⚡ BFX Trade Copier — مبني على <a href="https://github.com/tetratensor/MT4-MT5-Trade-Copier-Backend" target="_blank">MT4-MT5-Trade-Copier-Backend</a></p>
+  <p>© 2026 BFX AI — منصة نسخ الصفقات الاحترافية</p>
+</div>
+</body>
+</html>

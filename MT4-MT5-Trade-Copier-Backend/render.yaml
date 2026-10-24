@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: bfx-trade-copier
+    env: node
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: MT4-MT5-Trade-Copier-Backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SECRET_KEY
+        value: bfx-copier-secret-2026
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: DATABASE_URL
+        sync: false
