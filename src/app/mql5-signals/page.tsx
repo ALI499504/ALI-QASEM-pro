@@ -31,12 +31,14 @@ interface Signal {
 }
 
 // ============================================================================
-//  BFX MQL5 Signals Page — Beautiful copy trading marketplace
+//  BFX MQL5 Signals Page with embedded official MQL5.com iframe
 // ============================================================================
 export default function MQL5SignalsPage() {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"iframe" | "cards">("iframe");
+  const [iframeError, setIframeError] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -87,19 +89,20 @@ export default function MQL5SignalsPage() {
       background: "linear-gradient(135deg, #020617 0%, #0c1226 50%, #1e1b4b 100%)",
       color: "#e2e8f0",
       fontFamily: "Inter, system-ui, -apple-system, sans-serif",
+      direction: "ltr",  // LTR for proper MQL5.com display
     }}>
       {/* === Header === */}
       <header style={{
-        padding: "24px 32px",
-        background: "rgba(2,6,23,0.85)",
+        padding: "20px 32px",
+        background: "rgba(2,6,23,0.95)",
         backdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(99,102,241,0.2)",
+        borderBottom: "1px solid rgba(99,102,241,0.3)",
         position: "sticky",
         top: 0,
         zIndex: 100,
       }}>
         <div style={{
-          maxWidth: 1400,
+          maxWidth: 1600,
           margin: "0 auto",
           display: "flex",
           justifyContent: "space-between",
@@ -109,7 +112,7 @@ export default function MQL5SignalsPage() {
         }}>
           <div>
             <h1 style={{
-              fontSize: 28,
+              fontSize: 26,
               fontWeight: 800,
               background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
               WebkitBackgroundClip: "text",
@@ -121,311 +124,403 @@ export default function MQL5SignalsPage() {
             </h1>
             <p style={{
               color: "#94a3b8",
-              fontSize: 14,
+              fontSize: 13,
               margin: "4px 0 0 0",
             }}>
-              منصة نسخ الصفقات الرسمية من MetaTrader 5 — اختر الإشارة الأفضل واشترك بنقرة واحدة
+              منصة نسخ الصفقات الرسمية من MetaTrader 5 — {viewMode === "iframe" ? "عرض MQL5.com مباشرة" : "تصفّح أفضل الإشارات"}
             </p>
           </div>
-          <a
-            href="https://www.mql5.com/en/signals/mt5"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              padding: "10px 20px",
-              background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-              color: "#fff",
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {/* Toggle View Mode */}
+            <div style={{
+              display: "inline-flex",
+              background: "rgba(15,23,42,0.6)",
+              border: "1px solid rgba(99,102,241,0.3)",
               borderRadius: 8,
-              textDecoration: "none",
-              fontSize: 14,
-              fontWeight: 600,
-              boxShadow: "0 4px 12px rgba(79,70,229,0.4)",
-            }}
-          >
-            🚀 تصفّح MQL5 الرسمي
-          </a>
+              padding: 3,
+            }}>
+              <button
+                onClick={() => setViewMode("iframe")}
+                style={{
+                  padding: "8px 16px",
+                  background: viewMode === "iframe"
+                    ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
+                    : "transparent",
+                  color: viewMode === "iframe" ? "#fff" : "#94a3b8",
+                  border: "none",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                🌐 MQL5 الرسمي
+              </button>
+              <button
+                onClick={() => setViewMode("cards")}
+                style={{
+                  padding: "8px 16px",
+                  background: viewMode === "cards"
+                    ? "linear-gradient(135deg, #4f46e5, #7c3aed)"
+                    : "transparent",
+                  color: viewMode === "cards" ? "#fff" : "#94a3b8",
+                  border: "none",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                📊 بطاقات منسّقة
+              </button>
+            </div>
+            <a
+              href="https://www.mql5.com/en/signals/mt5"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: "10px 20px",
+                background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                color: "#000",
+                borderRadius: 8,
+                textDecoration: "none",
+                fontSize: 13,
+                fontWeight: 700,
+                boxShadow: "0 4px 12px rgba(251,191,36,0.4)",
+              }}
+            >
+              🚀 افتح MQL5 في تبويب جديد
+            </a>
+          </div>
         </div>
       </header>
 
-      {/* === Filters Panel === */}
-      <section style={{
-        padding: "20px 32px",
-        background: "rgba(15,23,42,0.5)",
-        borderBottom: "1px solid rgba(99,102,241,0.1)",
-      }}>
+      {/* === Main Content === */}
+      {viewMode === "iframe" ? (
         <div style={{
-          maxWidth: 1400,
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: 12,
+          width: "100%",
+          height: "calc(100vh - 100px)",
+          position: "relative",
+          background: "#0a0f1f",
         }}>
-          <div>
-            <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
-              🔍 بحث
-            </label>
-            <input
-              type="text"
-              placeholder="اسم الإشارة أو الـ provider..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
-              📈 Growth % (الأدنى)
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="1000"
-              value={minGrowth}
-              onChange={(e) => setMinGrowth(Number(e.target.value))}
-              style={inputStyle}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
-              📉 Max Drawdown %
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={maxDrawdown}
-              onChange={(e) => setMaxDrawdown(Number(e.target.value))}
-              style={inputStyle}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
-              ✅ Win Rate % (الأدنى)
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={minWinRate}
-              onChange={(e) => setMinWinRate(Number(e.target.value))}
-              style={inputStyle}
-            />
-          </div>
-
-          <div>
-            <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
-              🏦 الـ Broker
-            </label>
-            <select
-              value={brokerFilter}
-              onChange={(e) => setBrokerFilter(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="">الكل</option>
-              <option value="HotForex">HotForex</option>
-              <option value="IC Markets">IC Markets</option>
-              <option value="Exness">Exness</option>
-              <option value="Pepperstone">Pepperstone</option>
-              <option value="FXTM">FXTM</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
-              💱 الرمز
-            </label>
-            <select
-              value={symbolFilter}
-              onChange={(e) => setSymbolFilter(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="">الكل</option>
-              <option value="XAUUSD">XAUUSD (ذهب)</option>
-              <option value="EURUSD">EURUSD</option>
-              <option value="GBPUSD">GBPUSD</option>
-              <option value="USDJPY">USDJPY</option>
-              <option value="BTCUSD">BTCUSD</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
-              ⏱️ الفترة الزمنية
-            </label>
-            <select
-              value={timeframeFilter}
-              onChange={(e) => setTimeframeFilter(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="">الكل</option>
-              <option value="M1">M1 (دقيقة)</option>
-              <option value="M5">M5 (5 دقائق)</option>
-              <option value="M15">M15</option>
-              <option value="M30">M30</option>
-              <option value="H1">H1 (ساعة)</option>
-              <option value="H4">H4 (4 ساعات)</option>
-              <option value="D1">D1 (يومي)</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
-              🎯 ترتيب حسب
-            </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              style={inputStyle}
-            >
-              <option value="growth">📈 Growth</option>
-              <option value="winRate">✅ Win Rate</option>
-              <option value="drawdown">📉 Drawdown (الأقل)</option>
-              <option value="subscribers">👥 المشتركين</option>
-              <option value="profitFactor">💰 Profit Factor</option>
-              <option value="rating">⭐ التقييم</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{
-          marginTop: 16,
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          flexWrap: "wrap",
-        }}>
-          <label style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            cursor: "pointer",
-            color: "#cbd5e1",
-            fontSize: 14,
-          }}>
-            <input
-              type="checkbox"
-              checked={freeOnly}
-              onChange={(e) => setFreeOnly(e.target.checked)}
-              style={{ width: 18, height: 18, accentColor: "#10b981" }}
-            />
-            <span>🎁 الإشارات المجانية فقط</span>
-          </label>
-          <button
-            onClick={() => {
-              setSearch("");
-              setMinGrowth(0);
-              setMaxDrawdown(100);
-              setMinWinRate(0);
-              setFreeOnly(false);
-              setBrokerFilter("");
-              setSymbolFilter("");
-              setTimeframeFilter("");
-              setSortBy("growth");
-            }}
-            style={{
-              padding: "6px 12px",
-              background: "rgba(127,29,29,0.3)",
-              color: "#fca5a5",
-              border: "1px solid rgba(239,68,68,0.3)",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontSize: 12,
-            }}
-          >
-            🗑️ تصفير الفلاتر
-          </button>
-        </div>
-      </section>
-
-      {/* === Stats Summary === */}
-      <section style={{ padding: "16px 32px" }}>
-        <div style={{
-          maxWidth: 1400,
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-          gap: 12,
-        }}>
-          <StatCard label="إجمالي الإشارات" value={signals.length} color="#3b82f6" />
-          <StatCard label="إشارات مجانية" value={signals.filter(s => s.isFree).length} color="#10b981" />
-          <StatCard label="إشارات مدفوعة" value={signals.filter(s => !s.isFree).length} color="#f59e0b" />
-          <StatCard label="أعلى Growth" value={`${Math.max(0, ...signals.map(s => s.growth)).toFixed(1)}%`} color="#8b5cf6" />
-          <StatCard label="أعلى Win Rate" value={`${Math.max(0, ...signals.map(s => s.winRate)).toFixed(1)}%`} color="#ec4899" />
-        </div>
-      </section>
-
-      {/* === Signals Grid === */}
-      <section style={{ padding: "0 32px 32px" }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-          {loading && (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "#fbbf24" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
-              <div>جاري تحميل أفضل الإشارات...</div>
-            </div>
+          {!iframeError ? (
+            <>
+              <iframe
+                src="https://www.mql5.com/en/signals/mt5"
+                title="MQL5.com Signals"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                  background: "#fff",
+                }}
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+                referrerPolicy="no-referrer-when-downgrade"
+                onLoad={(e) => {
+                  // Try to detect if iframe loaded successfully
+                  try {
+                    const iframe = e.target as HTMLIFrameElement;
+                    // If we can access contentDocument, it's same-origin (allowed)
+                    if (iframe.contentDocument === null) {
+                      // Cross-origin blocked - this is normal, content should still display
+                      // unless MQL5 explicitly blocks iframe
+                    }
+                  } catch {
+                    // Ignore - cross-origin access throws
+                  }
+                }}
+                onError={() => setIframeError(true)}
+              />
+              {/* Fallback notice - shows after 5 seconds if iframe doesn't load properly */}
+              <IframeFallbackNotice onSwitchView={() => setViewMode("cards")} />
+            </>
+          ) : (
+            <IframeBlocked onSwitchView={() => setViewMode("cards")} />
           )}
-
-          {error && (
+        </div>
+      ) : (
+        <>
+          {/* === Filters Panel (only in cards view) === */}
+          <section style={{
+            padding: "20px 32px",
+            background: "rgba(15,23,42,0.5)",
+            borderBottom: "1px solid rgba(99,102,241,0.1)",
+          }}>
             <div style={{
-              padding: 24,
-              background: "rgba(127,29,29,0.3)",
-              border: "1px solid #ef4444",
-              borderRadius: 12,
-              textAlign: "center",
-              color: "#fca5a5",
+              maxWidth: 1600,
+              margin: "0 auto",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: 12,
             }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
-              <div style={{ marginBottom: 8 }}>خطأ: {error}</div>
-              <button onClick={fetchSignals} style={{
-                padding: "8px 16px",
-                background: "#7c3aed",
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
+                  🔍 بحث
+                </label>
+                <input
+                  type="text"
+                  placeholder="اسم الإشارة أو الـ provider..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
+                  📈 Growth % (الأدنى)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="1000"
+                  value={minGrowth}
+                  onChange={(e) => setMinGrowth(Number(e.target.value))}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
+                  📉 Max Drawdown %
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={maxDrawdown}
+                  onChange={(e) => setMaxDrawdown(Number(e.target.value))}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
+                  ✅ Win Rate % (الأدنى)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={minWinRate}
+                  onChange={(e) => setMinWinRate(Number(e.target.value))}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
+                  🏦 الـ Broker
+                </label>
+                <select
+                  value={brokerFilter}
+                  onChange={(e) => setBrokerFilter(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="">الكل</option>
+                  <option value="HotForex">HotForex</option>
+                  <option value="IC Markets">IC Markets</option>
+                  <option value="Exness">Exness</option>
+                  <option value="Pepperstone">Pepperstone</option>
+                  <option value="FXTM">FXTM</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
+                  💱 الرمز
+                </label>
+                <select
+                  value={symbolFilter}
+                  onChange={(e) => setSymbolFilter(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="">الكل</option>
+                  <option value="XAUUSD">XAUUSD (ذهب)</option>
+                  <option value="EURUSD">EURUSD</option>
+                  <option value="GBPUSD">GBPUSD</option>
+                  <option value="USDJPY">USDJPY</option>
+                  <option value="BTCUSD">BTCUSD</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
+                  ⏱️ الفترة الزمنية
+                </label>
+                <select
+                  value={timeframeFilter}
+                  onChange={(e) => setTimeframeFilter(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="">الكل</option>
+                  <option value="M1">M1 (دقيقة)</option>
+                  <option value="M5">M5 (5 دقائق)</option>
+                  <option value="M15">M15</option>
+                  <option value="M30">M30</option>
+                  <option value="H1">H1 (ساعة)</option>
+                  <option value="H4">H4 (4 ساعات)</option>
+                  <option value="D1">D1 (يومي)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", color: "#94a3b8", fontSize: 12, marginBottom: 6 }}>
+                  🎯 ترتيب حسب
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="growth">📈 Growth</option>
+                  <option value="winRate">✅ Win Rate</option>
+                  <option value="drawdown">📉 Drawdown (الأقل)</option>
+                  <option value="subscribers">👥 المشتركين</option>
+                  <option value="profitFactor">💰 Profit Factor</option>
+                  <option value="rating">⭐ التقييم</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{
+              marginTop: 16,
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              flexWrap: "wrap",
+            }}>
+              <label style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
                 cursor: "pointer",
+                color: "#cbd5e1",
+                fontSize: 14,
               }}>
-                إعادة المحاولة
+                <input
+                  type="checkbox"
+                  checked={freeOnly}
+                  onChange={(e) => setFreeOnly(e.target.checked)}
+                  style={{ width: 18, height: 18, accentColor: "#10b981" }}
+                />
+                <span>🎁 الإشارات المجانية فقط</span>
+              </label>
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setMinGrowth(0);
+                  setMaxDrawdown(100);
+                  setMinWinRate(0);
+                  setFreeOnly(false);
+                  setBrokerFilter("");
+                  setSymbolFilter("");
+                  setTimeframeFilter("");
+                  setSortBy("growth");
+                }}
+                style={{
+                  padding: "6px 12px",
+                  background: "rgba(127,29,29,0.3)",
+                  color: "#fca5a5",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontSize: 12,
+                }}
+              >
+                🗑️ تصفير الفلاتر
               </button>
             </div>
-          )}
+          </section>
 
-          {!loading && !error && signals.length === 0 && (
+          {/* === Stats Summary === */}
+          <section style={{ padding: "16px 32px" }}>
             <div style={{
-              padding: 60,
-              textAlign: "center",
-              color: "#94a3b8",
-              background: "rgba(15,23,42,0.5)",
-              borderRadius: 12,
-            }}>
-              <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
-              <div>لا توجد إشارات مطابقة لفلاترك. جرّب تخفيف الفلاتر.</div>
-            </div>
-          )}
-
-          {!loading && !error && signals.length > 0 && (
-            <div style={{
+              maxWidth: 1600,
+              margin: "0 auto",
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
-              gap: 16,
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 12,
             }}>
-              {signals.map((signal) => (
-                <SignalCard key={signal.id} signal={signal} />
-              ))}
+              <StatCard label="إجمالي الإشارات" value={signals.length} color="#3b82f6" />
+              <StatCard label="إشارات مجانية" value={signals.filter(s => s.isFree).length} color="#10b981" />
+              <StatCard label="إشارات مدفوعة" value={signals.filter(s => !s.isFree).length} color="#f59e0b" />
+              <StatCard label="أعلى Growth" value={`${Math.max(0, ...signals.map(s => s.growth)).toFixed(1)}%`} color="#8b5cf6" />
+              <StatCard label="أعلى Win Rate" value={`${Math.max(0, ...signals.map(s => s.winRate)).toFixed(1)}%`} color="#ec4899" />
             </div>
-          )}
-        </div>
-      </section>
+          </section>
+
+          {/* === Signals Grid === */}
+          <section style={{ padding: "0 32px 32px" }}>
+            <div style={{ maxWidth: 1600, margin: "0 auto" }}>
+              {loading && (
+                <div style={{ textAlign: "center", padding: "60px 0", color: "#fbbf24" }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>⏳</div>
+                  <div>جاري تحميل أفضل الإشارات...</div>
+                </div>
+              )}
+
+              {error && (
+                <div style={{
+                  padding: 24,
+                  background: "rgba(127,29,29,0.3)",
+                  border: "1px solid #ef4444",
+                  borderRadius: 12,
+                  textAlign: "center",
+                  color: "#fca5a5",
+                }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>❌</div>
+                  <div style={{ marginBottom: 8 }}>خطأ: {error}</div>
+                  <button onClick={fetchSignals} style={{
+                    padding: "8px 16px",
+                    background: "#7c3aed",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                  }}>
+                    إعادة المحاولة
+                  </button>
+                </div>
+              )}
+
+              {!loading && !error && signals.length === 0 && (
+                <div style={{
+                  padding: 60,
+                  textAlign: "center",
+                  color: "#94a3b8",
+                  background: "rgba(15,23,42,0.5)",
+                  borderRadius: 12,
+                }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>🔍</div>
+                  <div>لا توجد إشارات مطابقة لفلاترك. جرّب تخفيف الفلاتر.</div>
+                </div>
+              )}
+
+              {!loading && !error && signals.length > 0 && (
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
+                  gap: 16,
+                }}>
+                  {signals.map((signal) => (
+                    <SignalCard key={signal.id} signal={signal} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </>
+      )}
 
       {/* === Footer === */}
       <footer style={{
-        padding: "32px",
+        padding: "24px 32px",
         background: "rgba(2,6,23,0.85)",
         borderTop: "1px solid rgba(99,102,241,0.2)",
         textAlign: "center",
       }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+        <div style={{ maxWidth: 1600, margin: "0 auto" }}>
           <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 12 }}>
             🔗 المنصة الرسمية: <a
               href="https://www.mql5.com/en/signals/mt5"
@@ -442,6 +537,132 @@ export default function MQL5SignalsPage() {
           </p>
         </div>
       </footer>
+    </div>
+  );
+}
+
+// ============================================================================
+//  Iframe Fallback Notice — shows after delay if iframe may have failed
+// ============================================================================
+function IframeFallbackNotice({ onSwitchView }: { onSwitchView: () => void }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setShow(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: "absolute",
+      bottom: 16,
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: "rgba(2,6,23,0.95)",
+      border: "1px solid rgba(251,191,36,0.4)",
+      borderRadius: 8,
+      padding: "10px 16px",
+      color: "#cbd5e1",
+      fontSize: 13,
+      maxWidth: 600,
+      textAlign: "center",
+      boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
+    }}>
+      <div style={{ marginBottom: 6 }}>
+        ⚠ إذا كانت الصفحة أعلاه فارغة، قد يكون موقع MQL5.com يحظر التضمين.
+      </div>
+      <button
+        onClick={onSwitchView}
+        style={{
+          padding: "6px 12px",
+          background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+          color: "#fff",
+          border: "none",
+          borderRadius: 6,
+          cursor: "pointer",
+          fontSize: 12,
+          fontWeight: 600,
+        }}
+      >
+        📊 التبديل لعرض البطاقات
+      </button>
+      <span style={{ margin: "0 8px", color: "#475569" }}>أو</span>
+      <a
+        href="https://www.mql5.com/en/signals/mt5"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          color: "#fbbf24",
+          textDecoration: "none",
+          fontSize: 12,
+          fontWeight: 600,
+        }}
+      >
+        افتح MQL5.com في تبويب جديد ←
+      </a>
+    </div>
+  );
+}
+
+// ============================================================================
+//  Iframe Blocked — shown when iframe fails completely
+// ============================================================================
+function IframeBlocked({ onSwitchView }: { onSwitchView: () => void }) {
+  return (
+    <div style={{
+      position: "absolute",
+      top: "50%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      padding: 40,
+      background: "rgba(15,23,42,0.9)",
+      border: "1px solid rgba(239,68,68,0.4)",
+      borderRadius: 12,
+      textAlign: "center",
+      maxWidth: 500,
+    }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+      <h2 style={{ color: "#fca5a5", marginBottom: 12, fontSize: 20 }}>
+        موقع MQL5.com يحظر التضمين
+      </h2>
+      <p style={{ color: "#94a3b8", marginBottom: 20, fontSize: 14, lineHeight: 1.6 }}>
+        موقع MQL5.com يمنع عرضه داخل iframe. لديك خياران:
+      </p>
+      <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+        <button
+          onClick={onSwitchView}
+          style={{
+            padding: "10px 20px",
+            background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 600,
+          }}
+        >
+          📊 عرض البطاقات المنسّقة
+        </button>
+        <a
+          href="https://www.mql5.com/en/signals/mt5"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            padding: "10px 20px",
+            background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+            color: "#000",
+            textDecoration: "none",
+            borderRadius: 8,
+            fontSize: 13,
+            fontWeight: 700,
+            display: "inline-block",
+          }}
+        >
+          🌐 افتح MQL5.com
+        </a>
+      </div>
     </div>
   );
 }
@@ -500,7 +721,6 @@ function SignalCard({ signal }: { signal: Signal }) {
       e.currentTarget.style.boxShadow = "none";
     }}
     >
-      {/* Free badge */}
       {signal.isFree && (
         <div style={{
           position: "absolute",
@@ -518,7 +738,6 @@ function SignalCard({ signal }: { signal: Signal }) {
         </div>
       )}
 
-      {/* Header */}
       <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
         <div style={{
           width: 48,
@@ -563,7 +782,6 @@ function SignalCard({ signal }: { signal: Signal }) {
         </div>
       </div>
 
-      {/* Description */}
       <p style={{
         color: "#94a3b8",
         fontSize: 12,
@@ -574,7 +792,6 @@ function SignalCard({ signal }: { signal: Signal }) {
         {signal.description}
       </p>
 
-      {/* Stats Grid */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
@@ -589,7 +806,6 @@ function SignalCard({ signal }: { signal: Signal }) {
         <Stat label="Subs" value={signal.subscribers.toLocaleString()} color="#a855f7" />
       </div>
 
-      {/* Tags */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
         <Tag>{signal.timeframe}</Tag>
         {signal.symbols.slice(0, 3).map((s) => (
@@ -600,7 +816,6 @@ function SignalCard({ signal }: { signal: Signal }) {
         )}
       </div>
 
-      {/* Balance + Price */}
       <div style={{
         display: "flex",
         justifyContent: "space-between",
@@ -628,7 +843,6 @@ function SignalCard({ signal }: { signal: Signal }) {
         </div>
       </div>
 
-      {/* Subscribe Button */}
       <a
         href={signal.subscribeUrl}
         target="_blank"

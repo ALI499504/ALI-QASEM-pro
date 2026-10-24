@@ -1,7 +1,6 @@
 {
   "/api/mql5-signals/route": "app/api/mql5-signals/route.js",
   "/api/mt5/account/route": "app/api/mt5/account/route.js",
-  "/api/mt5/candles/route": "app/api/mt5/candles/route.js",
   "/api/mt5/positions/route": "app/api/mt5/positions/route.js",
   "/api/mt5/status/route": "app/api/mt5/status/route.js",
   "/mql5-signals/page": "app/mql5-signals/page.js",
