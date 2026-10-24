@@ -1,0 +1,4 @@
+name = "mrobot-gold"
+main = "worker.js"
+compatibility_date = "2024-09-23"
+account_id = "da0d78c6182015b0e7690cfaa1666ecd"
