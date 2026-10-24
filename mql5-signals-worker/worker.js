@@ -171,8 +171,8 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: l
     </div>
     <div class="header-actions">
       <div class="toggle-group">
-        <button class="toggle-btn active" id="btn-iframe" onclick="switchView('iframe')">🌐 MQL5 الرسمي</button>
-        <button class="toggle-btn" id="btn-cards" onclick="switchView('cards')">📊 بطاقات منسّقة</button>
+        <button class="toggle-btn" id="btn-iframe" onclick="switchView('iframe')">🌐 MQL5 الرسمي</button>
+        <button class="toggle-btn active" id="btn-cards" onclick="switchView('cards')">📊 بطاقات منسّقة</button>
       </div>
       <a href="https://www.mql5.com/en/signals/mt5" target="_blank" rel="noopener" class="btn-primary">🚀 افتح MQL5</a>
     </div>
@@ -180,19 +180,30 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: l
 </div>
 
 <!-- Iframe View -->
-<div id="iframe-view" class="iframe-container">
-  <iframe src="https://www.mql5.com/en/signals/mt5" title="MQL5.com Signals" id="mql5-iframe"
-    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-    referrerpolicy="no-referrer-when-downgrade"></iframe>
-  <div class="fallback-notice" id="fallback-notice" style="display:none;">
-    <div style="margin-bottom:8px;">⚠ إذا كانت الصفحة أعلاه فارغة، موقع MQL5.com يحظر التضمين.</div>
-    <button class="switch-btn" onclick="switchView('cards')">📊 عرض البطاقات</button>
-    <a href="https://www.mql5.com/en/signals/mt5" target="_blank" rel="noopener" class="open-link">🌐 افتح MQL5.com ←</a>
+<div id="iframe-view" class="iframe-container hidden">
+  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); padding:40px; background:rgba(15,23,42,0.95); border:1px solid rgba(99,102,241,0.3); border-radius:12px; text-align:center; max-width:600px;">
+    <div style="font-size:64px; margin-bottom:20px;">🔒</div>
+    <h2 style="color:#fbbf24; font-size:24px; margin-bottom:16px;">موقع MQL5.com يحظر التضمين</h2>
+    <p style="color:#94a3b8; font-size:14px; line-height:1.7; margin-bottom:24px;">
+      موقع MQL5.com الرسمي يستخدم <strong style="color:#fbbf24;">X-Frame-Options</strong> للأمان.<br>
+      لا يمكن عرضه داخل iframe لكن يمكنك:
+    </p>
+    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+      <button class="switch-btn" style="padding:12px 24px; background:linear-gradient(135deg, #4f46e5, #7c3aed); color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:700;" onclick="switchView('cards')">
+        📊 عرض البطاقات المنسّقة
+      </button>
+      <a href="https://www.mql5.com/en/signals/mt5" target="_blank" rel="noopener" style="padding:12px 24px; background:linear-gradient(135deg, #fbbf24, #f59e0b); color:#000; text-decoration:none; border-radius:8px; font-size:14px; font-weight:700; display:inline-block;">
+        🌐 افتح MQL5.com في تبويب ←
+      </a>
+    </div>
+    <p style="color:#64748b; font-size:12px; margin-top:24px;">
+      💡 جميع الإشارات المعروضة في البطاقات أعلاه مأخوذة من MQL5.com الرسمي — اضغط "اشترك" للاشتراك الفعلي عبر MQL5
+    </p>
   </div>
 </div>
 
 <!-- Cards View -->
-<div id="cards-view" class="hidden">
+<div id="cards-view">
   <div class="filters-panel">
     <div class="filters-grid">
       <div class="filter-group">
